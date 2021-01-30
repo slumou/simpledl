@@ -1,0 +1,160 @@
+#!/usr/bin/perl
+#
+# Dynamic Web archive file extraction on demand
+# Hussein Suleman
+# sometime in 2003
+#
+
+# get mapping of mime types to filename extensions
+open (FILE, "mime.types");
+my @mimelines = <FILE>;
+close (FILE);
+
+# create mime type mapping for future lookups
+my %mimemap = ();
+foreach my $mimeline (@mimelines)
+{
+   chomp $mimeline;
+   if (($mimeline ne '') && (substr ($mimeline, 0, 1) ne '#'))
+   {
+      my @fields = split (/\s+/, $mimeline);
+      for (my $i=1; $i<=$#fields; $i++ )
+      {
+         $mimemap{lc($fields[$i])} = $fields[0];
+      }
+   }
+}
+
+# return mime type for a given filename
+sub mime
+{
+   my ($filename) = @_;
+   
+   my $ext = '';
+   if ($filename =~ /(.*)\.([a-zA-Z]+)$/)
+   {
+      $ext = lc($2);
+   }
+   if (exists $mimemap{$ext})
+   { return $mimemap{$ext}; }
+   return 'text/plain';
+}
+
+
+# process URL and escaped characters
+my ($file, $path);
+my $parms = $ENV{PATH_INFO};
+$parms =~ s/\+/ /g;
+$parms =~ s/\n//g;
+$parms =~ s/%[0-9A-F][0-9A-F]/sprintf("%c", hex (substr ($&, 1)))/ge;
+if ($parms =~ /\/(.*\.[zZ][iI][pP])\/(.*)/)
+{
+#   $file = '../'.$1;
+   $file = '../collection/'.$1;
+   $path = $2;
+}
+
+# check for zip vs tgz
+my $filetype = 1;
+if ($file =~ /\.[zZ][iI][pP]$/)
+{ $filetype = 0; }
+
+# get listing of files
+sub listcommand 
+{
+   if ($filetype == 0)
+   { return "zipinfo -1 \"$file\" |"; }
+   else
+   { return "gzip -cd $file | tar -tf - |"; }
+}
+
+# extract a single file
+sub extractcommand
+{
+   my ($filename) = @_;
+   $filename =~ s/"//go;
+   if ($filetype == 0)
+   { return "unzip -p \"$file\" \"$filename\" |"; }
+   else
+   { return "gzip -cd $file | tar -xOf - \"$filename\" |"; }
+}
+
+# get archive file listing
+open (FILE, listcommand);
+my @data = <FILE>;
+close (FILE);
+
+for ( my $i=0; $i<=$#data; $i++ )
+{
+   chomp $data[$i];
+}
+
+my $done = 0;
+
+# search through files in listing to find match
+foreach my $filename (@data)
+{
+   if (($filename eq $path) || (($path eq '') && ($done == 0)))
+   {
+      if ((substr ($filename, -1) ne '/') && ($path ne ''))
+      {
+         # extract matching file and output it
+            print "Content-type: ".mime ($filename)."\n".
+                  "Cache-control: max-age=300, public\n\n";
+         open (FILE, extractcommand ($filename));
+         my @contents = <FILE>;
+         print @contents;
+         close (FILE);
+      }
+      else
+      { 
+         # look for pre-built index.html file
+         my @filelist = ();
+         my $foundindex = '';
+         foreach my $filename2 (@data)
+         {
+            my $str1 = substr ($filename2, 0, length ($path));
+            my $str2 = substr ($filename2, length ($path));
+            my $str3 = $str2; $str3 =~ s/[^\/]//go;
+            if (($str1 eq $path) && ((length ($str3) == 0 ) || ((substr ($str2, -1) eq '/')) && (length ($str3) == 1)) )
+            {
+               $filelist[$#filelist+1] = $str2;
+               if ($str2 =~ /index\.html?/)
+               {
+                  $foundindex = $filename2;
+               }
+            }
+         }
+         
+         # output prebuilt index.html content
+         if ($foundindex ne '')
+         {
+            print "Content-type: ".mime ($foundindex)."\n".
+                  "Cache-control: max-age=300, public\n\n";
+            open (FILE, extractcommand ($foundindex));
+            my @contents = <FILE>;
+            print @contents;
+            close (FILE);
+         }
+         else
+         {
+            # output navigable listing of files at that directory
+            print "Content-type: text/html\n\n";
+            print "<html><body><p><h3>List of files/directories in $path...</h3></p>";
+            foreach my $filename3 (@filelist)
+            {
+               print "<a href=\"$filename3\">$filename3</a><br>";
+            }
+            print "</body></html>";
+         }
+      }
+      $done = 1;
+   }
+}
+
+# if all else fails, URL must not match anything in archive file
+if ($done == 0)
+{
+   print "Content-type: text/plain\n\nfile $file not found ... \n";
+}
+
