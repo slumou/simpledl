@@ -43,6 +43,7 @@ not connected to the Internet)
 execute cgi scripts in the public_html/cgi-bin directory
 * visit "http://yoursite/cgi-bin/admin.pl" and log in.
 
+
 ## How to configure the software
 
 All configuration information is in the data directory, and this gets copies
