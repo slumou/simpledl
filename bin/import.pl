@@ -115,6 +115,8 @@ sub importDir
 {
    my ($source, $destination, $offset, $level) = @_;
    
+   mkdir ($destination);
+   
    opendir (my $dir, $source.$offset);
    my @dirs = readdir ($dir);
    closedir ($dir);
@@ -420,6 +422,10 @@ sub createXML
    {
       my $heading = $headings->[$i];
 
+      # trim start and end spaces in tag name
+      $heading =~ s/\s+$//;
+      $heading =~ s/^\s+//;      
+
       # special processing for structured event Atom fields and for links to objects
       if ($heading eq 'eventActors')
       { $eventActors = $values->[$i]; }
@@ -511,6 +517,8 @@ sub createXML
 sub importUsers
 {
    my ($source, $destination) = @_;
+   
+   mkdir ($destination);
 
    opendir (my $dir, $source);
    my @users = readdir ($dir);

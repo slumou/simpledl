@@ -363,6 +363,11 @@ sub recursiveCopy
          my $f = FileHandle->new ($source, "r");
          binmode $f;
          cp ($f, $destination);
+         # make sure files in cgi are not writable by others
+         if ($destination =~ /cgi-bin/)
+         {
+            system ("chmod go-w $destination");
+         }
       }   
    }
    else
@@ -371,7 +376,12 @@ sub recursiveCopy
       if (! -e $destination)
       {
          print "Making directory $destination\n";
-         mkdir ($destination)
+         mkdir ($destination);
+         # make sure cgi directory is not readable
+         if ($destination =~ /cgi-bin/)
+         {
+            system ("chmod 711 $destination");
+         }         
       }
       opendir (my $sdir, "$source");
       my @files = readdir ($sdir);
