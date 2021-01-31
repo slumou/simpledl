@@ -265,7 +265,7 @@ function doSearch (aprefix)
 //   searchResults = ranked;
 
    document.forms["pager"].elements["pagenumber"].value = 1;
-   document.forms["pager"].elements["numberofresults"].value = ranked.length;
+   document.getElementById ("numberofresults").innerHTML = ranked.length;
    displayPage();
 }
 
@@ -297,6 +297,14 @@ function displayPage ()
 {
    var pagenumber = parseInt (document.forms["pager"].elements["pagenumber"].value);
    var resultsperpage = parseInt (document.forms["pager"].elements["resultsperpage"].value);
+   
+   var resultsstart = document.getElementById ("resultsstart");
+   var resultsend = document.getElementById ("resultsend");
+   resultsstart.innerHTML = ((pagenumber-1) * resultsperpage)+1;
+   if ((pagenumber*resultsperpage) < (ranked.length+1))
+      resultsend.innerHTML = (pagenumber*resultsperpage);
+   else
+      resultsend.innerHTML = ranked.length;   
 
    // populate result list 
    var resultdiv = document.getElementById ("resultlist");
@@ -315,58 +323,93 @@ function displayPage ()
 //         resultfrag = resultfrag+'<li><b><a href="'+prefix+fn+'">'+filetitles[ranked[i]]+'</a></b></li>';
          
          // for output based on reading metadata files
-         var item = fn.replace (/\/index\.html$/, "");
-         var metadataDocument = loadXML (prefix+item+'/metadata.xml');
-         var itemfrag = '';
-         
-         if (! metadataDocument)
-         {
-            itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'"><div class="searchthumbtext"><p>'+item+'</p></div></a></div>';
-         }
-         else
-         {
-            itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'">';
-            var itemfragcontent = '';
-            // check for levelOfDescription that indicates a composite thumbnail
-            var levelOfDescription = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('levelOfDescription');
-            if (levelOfDescription.length > 0)
-            {
-               var LoD = levelOfDescription.item(0).firstChild.data;
-               if (LoD == 'file')
-               {
-                  itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="'+prefix+item+'/thumbnail.jpg"/></div>';
-               }
-               else
-               {         
-                  var views = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('view');
-                  if (views.length > 0)
-                  {
-                     var files = views.item(0).getElementsByTagName ('file');
-                     if (files.length > 0)
-                     {
-                        itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="thumbs/'+files.item(0).firstChild.data+'.jpg"/></div>';
-                     }
-                  }
-               }
-            }      
-            // add in title if it exists
-            var titles = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('title');
-            if (titles.length > 0)
-            {
-               itemfragcontent = itemfragcontent + '<div class="searchthumbtext"><p>'+titles.item(0).firstChild.data+'</p></div>';
-            }
-            if (itemfragcontent == '')
-            { itemfragcontent = '<div class="searchthumbtext"><p>'+item+'</p></div>'; }
-            itemfrag = itemfrag + itemfragcontent + '</a></div>';         
-         }
-         resultfrag = resultfrag + itemfrag; 
+         if (toplevel == 'users')
+            resultfrag = resultfrag + renderUser (prefix, fn);
+         else   
+            resultfrag = resultfrag + renderMetadata (prefix, fn);
       }
 //      resultfrag = resultfrag+'</ol>';
    }
    else
    {
-      resultfrag = '<h2>No matching pages.</h2>';
+      resultfrag = '<h2>No matches.</h2>';
    }
    resultdiv.innerHTML = resultfrag;
+}
+
+function renderMetadata (prefix, fn)
+{
+   var item = fn.replace (/\/index\.html$/, "");
+   var metadataDocument = loadXML (prefix+item+'/metadata.xml');
+   var itemfrag = '';
+   
+   if (! metadataDocument)
+   {
+      itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'"><div class="searchthumbtext"><p>'+item+'</p></div></a></div>';
+   }
+   else
+   {
+      itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'">';
+      var itemfragcontent = '';
+      // check for levelOfDescription that indicates a composite thumbnail
+      var levelOfDescription = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('levelOfDescription');
+      if (levelOfDescription.length > 0)
+      {
+         var LoD = levelOfDescription.item(0).firstChild.data;
+         if (LoD == 'file')
+         {
+            itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="'+prefix+item+'/thumbnail.jpg"/></div>';
+         }
+         else
+         {         
+            var views = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('view');
+            if (views.length > 0)
+            {
+               var files = views.item(0).getElementsByTagName ('file');
+               if (files.length > 0)
+               {
+                  itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="thumbs/'+files.item(0).firstChild.data+'.jpg"/></div>';
+               }
+            }
+         }
+      }      
+      // add in title if it exists
+      var titles = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('title');
+      if (titles.length > 0)
+      {
+         itemfragcontent = itemfragcontent + '<div class="searchthumbtext"><p>'+titles.item(0).firstChild.data+'</p></div>';
+      }
+      if (itemfragcontent == '')
+      { itemfragcontent = '<div class="searchthumbtext"><p>'+item+'</p></div>'; }
+      itemfrag = itemfrag + itemfragcontent + '</a></div>';         
+   }
+   return itemfrag;
+}
+
+function renderUser (prefix, fn)
+{
+   var item = fn.replace (/\.html$/, "");
+   var metadataDocument = loadXML (prefix+item+'.xml');
+   var itemfrag = '';
+   
+   if (! metadataDocument)
+   {
+      itemfrag = '<div class="searchuserthumb"><a href="'+prefix+fn+'"><div class="searchuserthumbtext"><p>'+item+'</p></div></a></div>';
+   }
+   else
+   {
+      itemfrag = '<div class="searchuserthumb"><a href="'+prefix+fn+'">';
+      var itemfragcontent = '';
+      // check for user name
+      var names = metadataDocument.getElementsByTagName ('user').item(0).getElementsByTagName('name');
+      if (names.length > 0)
+      {
+         itemfragcontent = itemfragcontent + '<div class="searchuserthumbtext"><p>'+names.item(0).firstChild.data+'</p></div>';
+      }
+      if (itemfragcontent == '')
+      { itemfragcontent = '<div class="searchuserthumbtext"><p>'+item+'</p></div>'; }
+      itemfrag = itemfrag + itemfragcontent + '</a></div>';
+   }
+   return itemfrag;
 }
  
