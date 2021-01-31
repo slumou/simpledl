@@ -2,6 +2,7 @@
 // Hussein Suleman
 // 16 April 2019
 
+// load an XML file locally or remotely
 function loadXML (URL)
 {
    var http_request = false;
@@ -48,14 +49,22 @@ function loadXML (URL)
    return XML;
 }
 
+
+// persistent result storage for paging
+var filenames = new Array ();
+var ranked = new Array ();
+var prefix = '';
+
+
+// main search function
 function doSearch (aprefix)
 {
    var query;
    var terms;
-   var prefix;
+//   var prefix;
    var index;
    var accum;
-   var filenames;
+//   var filenames;
    var filetitles;
 
    // prefix for http requests
@@ -95,7 +104,8 @@ function doSearch (aprefix)
    
    // create array
    accum = new Array();
-   filenames = new Array();
+//   filenames = new Array();
+   filenames = new Array ();
    filetitles = new Array();
 
    // make sure we do not split an empty query   
@@ -137,7 +147,8 @@ function doSearch (aprefix)
    }
 
    // selection sort based on weights, ignoring zero values
-   var ranked = new Array();
+//   var ranked = new Array();
+   ranked = new Array ();
    var weight = new Array();
    var k = 0;
    for ( var i=0; i<accum.length; i++ )
@@ -251,21 +262,106 @@ function doSearch (aprefix)
       }
    }
    
+//   searchResults = ranked;
+
+   document.forms["pager"].elements["pagenumber"].value = 1;
+   document.forms["pager"].elements["numberofresults"].value = ranked.length;
+   displayPage();
+}
+
+function nextPage ()
+{
+   var pagenumber = parseInt (document.forms["pager"].elements["pagenumber"].value);
+   var resultsperpage = parseInt (document.forms["pager"].elements["resultsperpage"].value);
+   if (pagenumber*resultsperpage < ranked.length)
+   {
+      pagenumber++;
+      document.forms["pager"].elements["pagenumber"].value = pagenumber;
+      displayPage ();
+   }
+}
+
+function prevPage ()
+{
+   var pagenumber = parseInt (document.forms["pager"].elements["pagenumber"].value);
+   var resultsperpage = parseInt (document.forms["pager"].elements["resultsperpage"].value);
+   if (pagenumber > 1)
+   {
+      pagenumber--;
+      document.forms["pager"].elements["pagenumber"].value = pagenumber;
+      displayPage ();
+   }
+}
+
+function displayPage ()
+{
+   var pagenumber = parseInt (document.forms["pager"].elements["pagenumber"].value);
+   var resultsperpage = parseInt (document.forms["pager"].elements["resultsperpage"].value);
+
    // populate result list 
    var resultdiv = document.getElementById ("resultlist");
    var resultfrag = '';
    if (ranked.length > 0)
    {
-      resultfrag = '<ol>';
-      for ( var i=0; i<ranked.length; i++ )
+//      resultfrag = '<ol>';
+      for ( var i=(pagenumber-1) * resultsperpage; i<pagenumber*resultsperpage; i++ )
+      if ((i>=0) && (i<ranked.length))
       {
          var fn = filenames[ranked[i]];
          fn = fn.replace (/\.xml/, ".html");
          
+         // for Text output
 //         resultfrag = resultfrag+'<li><b><a href="'+prefix+fn+'">'+filetitles[ranked[i]]+'</a></b><br/><i>'+filenames[ranked[i]]+'</i></li>';
-         resultfrag = resultfrag+'<li><b><a href="'+prefix+fn+'">'+filetitles[ranked[i]]+'</a></b></li>';
+//         resultfrag = resultfrag+'<li><b><a href="'+prefix+fn+'">'+filetitles[ranked[i]]+'</a></b></li>';
+         
+         // for output based on reading metadata files
+         var item = fn.replace (/\/index\.html$/, "");
+         var metadataDocument = loadXML (prefix+item+'/metadata.xml');
+         var itemfrag = '';
+         
+         if (! metadataDocument)
+         {
+            itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'"><div class="searchthumbtext"><p>'+item+'</p></div></a></div>';
+         }
+         else
+         {
+            itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'">';
+            var itemfragcontent = '';
+            // check for levelOfDescription that indicates a composite thumbnail
+            var levelOfDescription = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('levelOfDescription');
+            if (levelOfDescription.length > 0)
+            {
+               var LoD = levelOfDescription.item(0).firstChild.data;
+               if (LoD == 'file')
+               {
+                  itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="'+prefix+item+'/thumbnail.jpg"/></div>';
+               }
+               else
+               {         
+                  var views = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('view');
+                  if (views.length > 0)
+                  {
+                     var files = views.item(0).getElementsByTagName ('file');
+                     if (files.length > 0)
+                     {
+                        itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="thumbs/'+files.item(0).firstChild.data+'.jpg"/></div>';
+                     }
+                  }
+               }
+            }      
+            // add in title if it exists
+            var titles = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('title');
+            if (titles.length > 0)
+            {
+               itemfragcontent = itemfragcontent + '<div class="searchthumbtext"><p>'+titles.item(0).firstChild.data+'</p></div>';
+            }
+            if (itemfragcontent == '')
+            { itemfragcontent = '<div class="searchthumbtext"><p>'+item+'</p></div>'; }
+            itemfrag = itemfrag + itemfragcontent + '</a></div>';         
+         }
+         resultfrag = resultfrag + itemfrag; 
       }
-      resultfrag = resultfrag+'</ol>';
+//      resultfrag = resultfrag+'</ol>';
    }
    else
    {
@@ -273,5 +369,4 @@ function doSearch (aprefix)
    }
    resultdiv.innerHTML = resultfrag;
 }
-
  
