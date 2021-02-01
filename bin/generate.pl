@@ -101,8 +101,15 @@ sub generateThumbs
             ) 
       {
          print "Creating thumbnail for $source/$afile\n";
+         # switch to fixed thumbnails for some files
+         my $filename = "$source/$afile";
+         if ($filename =~ /\.[Zz][Ii][Pp]$/)
+         { $filename = "$renderDir/images/zipicon.png"; }
+         elsif ($filename =~ /\.[Mm][Pp][3]$/)
+         { $filename = "$renderDir/images/audioicon.png"; }
+         # create thumbnail 
          my $command = "convert -define jpeg:size=200x200 ".
-               "\'$source/$afile\'"."[0] ".                  
+               "\'$filename\'"."[0] ".                  
                "-thumbnail '200x200>' -background white -gravity center -extent 200x200 ".
                "\'$dest/$afile.jpg\' 2\>/dev/null";
 #         print $command."\n";
