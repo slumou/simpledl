@@ -477,11 +477,11 @@ sub generatePage
          if ($location =~ /(metadata\/(.*)\/)index/)
          { 
             $item = $2; 
-            $basedir = $1
+            $basedir = $1;
          }
          $basedir =~ s/[^\/]//go;
          $basedir =~ s/\//\.\.\//go;
-
+#print $basedir;
 #         if (substr ($item, -5) eq 'index')
 #         { $item = substr ($item, 0, -6); }
          
