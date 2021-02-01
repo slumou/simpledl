@@ -81,7 +81,7 @@ function checkCookies () {
          doLogin ();
       }
    }
-}   
+}
 
 function doLogin ()
 {

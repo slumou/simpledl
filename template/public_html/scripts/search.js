@@ -79,6 +79,7 @@ function doSearch (aprefix)
    query = query.replace (/['"_\.]/g, " ");
    query = query.replace (/^ +/, "");
    query = query.replace (/ +$/, "");
+//   query = query.replace (/%20/, " ");
    
    // which index to use
    var use_index = document.forms["searchform"].elements["index"].value;
@@ -300,7 +301,10 @@ function displayPage ()
    
    var resultsstart = document.getElementById ("resultsstart");
    var resultsend = document.getElementById ("resultsend");
-   resultsstart.innerHTML = ((pagenumber-1) * resultsperpage)+1;
+   if (ranked.length > 0)
+      resultsstart.innerHTML = ((pagenumber-1) * resultsperpage)+1;
+   else
+      resultsstart.innerHTML = '0';   
    if ((pagenumber*resultsperpage) < (ranked.length+1))
       resultsend.innerHTML = (pagenumber*resultsperpage);
    else
