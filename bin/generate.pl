@@ -472,6 +472,7 @@ sub generatePage
    {
       if (-e "$renderDir/$location.xml")
       {
+         print "Found item\n";
          my $item = '';
          my $basedir = $location;
          if ($location =~ /(metadata\/(.*)\/)index/)
