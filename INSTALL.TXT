@@ -1,5 +1,7 @@
+apache2
+apache2-suexec-custom
+git
+imagemagick
+xsltproc
 sudo apt-get install libxml-dom-perl
 sudo apt-get install libxml-dom-xpath-perl
-
-
-
