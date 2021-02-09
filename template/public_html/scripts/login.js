@@ -126,7 +126,7 @@ function frontPageSearch ( avar )
    document.location.href="./search.html?query=" + avar;
 }
 
-// any page with a text box: to convert page breaks in text boxes into <br>s
+// any page with a text box: to convert page breaks in text boxes into <br>s and make links live
 
 function makeBreaks () {
    var i;
@@ -147,6 +147,9 @@ function makeBreaks () {
       document.getElementsByTagName ("p")[i].innerHTML =
       document.getElementsByTagName ("p")[i].innerHTML.replace
         (/\n/g,"<br/>");
+      document.getElementsByTagName ("p")[i].innerHTML =
+      document.getElementsByTagName ("p")[i].innerHTML.replace
+        (/(https?:\/\/[^ <]+)/g,"<a href=\"$1\">$1</a>");  
    }
 }
 
