@@ -16,7 +16,7 @@ use FindBin;
 my $cwd = $FindBin::Bin;
 #do "$cwd/config.pl";
 
-my $dbDir = "$cwd/../db";
+my $dbDir = "$cwd/../../db";
 my $userRenderDir = "$cwd/../../public_html/users";
 
 my $entity_index = {};
@@ -96,6 +96,8 @@ sub addEntityMetadata
    my $name = authToName ($authname);
    if (! defined $entity_index->{$name})
    { $entity_index->{$name} = [ $authname, $entity_id++, $metadata ]; }
+   else
+   { $entity_index->{$name}->[2] = $metadata; }
 }
 
 sub addEntityItemRole
