@@ -6,6 +6,7 @@
 
 $| = 1;
 
+use Getopt::Long;
 use Unicode::Normalize qw (NFD);
 use utf8;
 
@@ -15,6 +16,25 @@ use EntityManager qw (:DEFAULT);
 use CSV qw (:DEFAULT);
 
 do "$FindBin::Bin/../../data/config/config.pl";
+
+
+# check a list of source files against a list of destination files
+sub needUpdate
+{
+   my ($source, $dest) = @_;
+   
+   foreach my $dfile (@$dest)
+   {
+      if (! -e $dfile)
+      { return 1; }
+      foreach my $sfile (@$source)
+      {
+         if (-M $sfile < -M $dfile)
+         { return 1; }
+      }
+   }
+   return 0;
+}
 
 
 # process all preset authority files and pre-populate authority lists
@@ -113,7 +133,7 @@ sub getPos
 # process a directory of metadata spreadsheets
 sub importDir
 {
-   my ($source, $destination, $offset, $level) = @_;
+   my ($source, $destination, $offset, $level, $optForce) = @_;
    
    mkdir ($destination);
    
@@ -148,7 +168,7 @@ sub importDir
             print "Creating directory $destination$offset/$d\n";
             mkdir ("$destination$offset/$d");
          }   
-         importDir ($source, $destination, "$offset/$d", $level+1);
+         importDir ($source, $destination, "$offset/$d", $level+1, $optForce);
       }
       elsif ($d =~ /\.[cC][sS][vV]$/)
       {
@@ -204,7 +224,7 @@ sub importDir
 
             if ($LoD ne 'collection')
             {
-               print "Detected $LoD metadata\n";
+               #print "Detected $LoD metadata\n";
                my $filename = $counter;
                my $effectiveLevel = $level + 1;
                $counter++;
@@ -298,9 +318,9 @@ sub importDir
                }   
 
                # write XML
-               if ($filename ne '')
+               if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
                {
-                  print "Generating $destination$offset/$filename/metadata.xml\n";
+                  print "Generating $LoD $destination$offset/$filename/metadata.xml\n";
                   if (! -e "$destination$offset/$filename")
                   {
                      # print "Creating directory $destination$offset/$filename\n";
@@ -318,7 +338,7 @@ sub importDir
             }
             elsif ($LoD eq 'collection')
             {
-               print "Detected collection metadata\n";
+               #print "Detected collection metadata\n";
                   
                if (! defined $legacyId_position)
                { next; }
@@ -338,9 +358,9 @@ sub importDir
                }   
          
                # write XML
-               if ($filename ne '')
+               if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
                {
-                  print "Generating $destination$offset/$filename/metadata.xml\n";
+                  print "Generating $LoD $destination$offset/$filename/metadata.xml\n";
                   if (! -e "$destination$offset/$filename")
                   {
                      print "Creating directory $destination$offset/$filename\n";
@@ -366,9 +386,15 @@ sub importDir
       @items = grep { -d "$destination$offset/$_" } @items;
    }
    
+   # prefix each directory, to create list of source spreadsheets
+   @d = map { "$source$offset/$_" } @d; 
+   
    # output index file
-   print "Generating $destination$offset/index.xml\n";
-   createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @items), $level, $LoD ]);
+   if ((needUpdate (\@d, ["$destination$offset/index.xml"])) || ($optForce))
+   {
+      print "Generating $destination$offset/index.xml\n";
+      createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @items), $level, $LoD ]);
+   }
    
    # output blank metadata file if it is not there
    if (! -e "$destination$offset/metadata.xml")
@@ -380,9 +406,12 @@ sub importDir
    # cycle through and generate deferred index files
    foreach my $parent (keys %childrenByParent)
    {
-      # output index file
-      print "Generating $destination$offset/$parent/index.xml\n";
-      createXML ("$destination$offset/$parent/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @{$childrenByParent{$parent}}), $levelsByParent{$parent}->[0], $levelsByParent{$parent}->[1] ]);
+      if ((needUpdate (\@d, ["$destination$offset/$parent/index.xml"])) || ($optForce))
+      {
+         # output index file
+         print "Generating deferred $destination$offset/$parent/index.xml\n";
+         createXML ("$destination$offset/$parent/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @{$childrenByParent{$parent}}), $levelsByParent{$parent}->[0], $levelsByParent{$parent}->[1] ]);
+      }
    }
 }
 
@@ -535,8 +564,9 @@ sub importUsers
          # user entry globs
          my $maxuserlen = 6;
          my $maxuserglob = join ('', map { '?' } 1..$maxuserlen);
-      
+
          # merge user bits into a single file
+         print "importing user $userID\n";
          system ("echo \'<user><type>$vocab->{'PublicContributor'}</type>\' > $destination/$userID.xml; ".
            "cat $userDir/$userID.name.xml >> $destination/$userID.xml 2>/dev/null; ".
            "cat $userDir/$userID.profile.xml >> $destination/$userID.xml 2>/dev/null; ".
@@ -625,6 +655,7 @@ sub importUploads
    print $ifile "</collection>\n";
 }
 
+# main program body
 sub main
 {
    # save the old metadata directory
@@ -632,21 +663,71 @@ sub main
    #system ("mv $cwd/../public_html/metadata $cwd/../public_html/metadata.".$timenow);
    #mkdir ("$cwd/../public_html/metadata");
 
-   # process entities and metadata
-   loadEntities ();
-   importAuthorities ($spreadsheetDir);
-   importDir ($spreadsheetDir, $metadataDir, '', 1);
-   saveEntities ();
-   createEntityFiles ();
+   my ($optForce, $optHelp, $optUsers, $optDir, $optComments, $optUploads, $optAll) = (0, 0, 0, 0, 0, 0, 0);
+   my $optionsOK = GetOptions ('help|?' => \$optHelp, 
+                               'comments' => \$optComments,
+                               'dir' => \$optDir,
+                               'uploads' => \$optUploads,
+                               'users' => \$optUsers,
+                               'all' => \$optAll,
+                               'force' => \$optForce
+                               );
    
-   # process users
-   importUsers ($userDir, $userRenderDir);
-   
-   # process comments
-   importComments ($metadataDir, $commentDir, $commentRenderDir, '');
-   
-   # process uploads
-   importUploads ($uploadDir, "$metadataDir/$uploadMetadataLocation");
+   # if error or help asked for
+   if (($optionsOK == 0) || ($optHelp == 1))
+   {
+      print <<EOC;
+import.pl [options]
+
+Options:
+ --help       this information
+ --comments   import comments
+ --dir        import all metadata (default if no options specified)
+ --uploads    import uploaded files/metadata
+ --users      import users
+ --all        full data import
+ --force      force import of data
+EOC
+   }
+
+   # if no options, default to processing only metadata
+   if (($optHelp == 0) && ($optComments == 0) && ($optDir == 0) && ($optUploads == 0) && ($optUsers == 0) && ($optAll == 0))
+   {
+      $optDir = 1;
+   }
+   # if full import requested, set all options to true
+   if ($optAll == 1)
+   {
+      ($optComments, $optDir, $optUploads, $optUsers) = (1, 1, 1, 1); 
+   }
+
+   # check each individual option   
+   if ($optDir == 1) 
+   {
+      print "Importing metadata and entities\n";
+      loadEntities ();
+      importAuthorities ($spreadsheetDir);
+      importDir ($spreadsheetDir, $metadataDir, '', 1, $optForce);
+      saveEntities ();
+      createEntityFiles ();
+   }
+   if ($optUsers == 1) 
+   { 
+      print "Importing users\n";
+      importUsers ($userDir, $userRenderDir);
+   }
+   if ($optComments == 1)
+   {
+      print "Importing comments\n";
+      importComments ($metadataDir, $commentDir, $commentRenderDir, '');
+   }
+   if ($optUploads == 1)
+   {
+      print "Importing uploads\n";
+      importUploads ($uploadDir, "$metadataDir/$uploadMetadataLocation");
+   }
 }
 
 main ();
+
+
