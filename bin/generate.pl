@@ -97,7 +97,7 @@ sub isAcceptedFilename
 # create thumbnails if needed
 sub generateThumbs
 {
-   my ($source, $dest) = @_;
+   my ($source, $dest, $optForce) = @_;
    
    opendir (my $sdir, $source);
    my @files = readdir ($sdir);
@@ -110,14 +110,16 @@ sub generateThumbs
    {
       if (-d "$source/$afile")
       {
-         generateThumbs ($source.'/'.$afile, $dest.'/'.$afile);
+         generateThumbs ($source.'/'.$afile, $dest.'/'.$afile, $optForce);
       }
       # if the file does not exist and is acceptable or
       # the age of the thumb is greater than the age of the file
       elsif (((! -e "$dest/$afile.jpg") && isAcceptedFilename ($afile))
              ||
              (-M "$dest/$afile.jpg" > -M "$source/$afile")
-            ) 
+             ||
+             ($optForce)
+            )
       {
          print "Creating thumbnail for $source/$afile\n";
          # switch to fixed thumbnails for some files
@@ -132,7 +134,6 @@ sub generateThumbs
                "-thumbnail '200x200>' -background white -gravity center -extent 200x200 ".
                "\'$dest/$afile.jpg\' 2\>/dev/null";
 #         print $command."\n";
-         system ($command);
       }         
    }
 }
@@ -140,7 +141,7 @@ sub generateThumbs
 # create composite thumbnails if needed
 sub generateCompositeThumbs
 {
-   my ($source, $offset) = @_;
+   my ($source, $offset, $optForce) = @_;
    
    opendir (my $sdir, "$source$offset");
    my @files = readdir ($sdir);
@@ -151,7 +152,7 @@ sub generateCompositeThumbs
    {
       if (-d "$source$offset/$afile")
       {
-         generateCompositeThumbs ($source, $offset.'/'.$afile);
+         generateCompositeThumbs ($source, $offset.'/'.$afile, $optForce);
       }
       elsif ($afile =~ /index\.[xX][mM][lL]$/)
       {
@@ -187,7 +188,7 @@ sub generateCompositeThumbs
                }
                
                # regenerate if composite does not exist or if newer thumbnails exist
-               my $needupdate = 1;
+               my $needupdate = 0;
                if (! -e "$source$offset/thumbnail.jpg")
                { $needupdate = 1; }
                else
@@ -201,8 +202,8 @@ sub generateCompositeThumbs
                      }
                   }
                }
-               
-               if ($needupdate == 1) 
+
+               if (($needupdate == 1) || ($optForce))
                { 
                   #print "Generating composite thumbnail: $source$offset\n";
                   my $command = "convert -type TrueColor -size 200x200 xc:grey ".
@@ -316,7 +317,7 @@ sub generateItemStubs
 # generate all metadata HTML files
 sub generateDir
 {
-   my ($source, $offset, $basedir, $commentRenderDir) = @_;
+   my ($source, $offset, $basedir, $commentRenderDir, $optForce) = @_;
    
    opendir (my $sdir, "$source$offset");
    my @files = readdir ($sdir);
@@ -327,7 +328,7 @@ sub generateDir
    {
       if (-d "$source$offset/$afile")
       {
-         generateDir ($source, $offset.'/'.$afile, $basedir.'../', $commentRenderDir);
+         generateDir ($source, $offset.'/'.$afile, $basedir.'../', $commentRenderDir, $optForce);
       }
       elsif ($afile =~ /(.*)\.[xX][mM][lL]$/)
       {
@@ -336,9 +337,12 @@ sub generateDir
          {
             my $item = substr ("$offset", 1);
             generateItemStubs ($item);
-            print "Transforming $source/$item xml->html\n";
-            transform ($mainstylesheet, "$source/$item/index.xml", "$source/$item/index.html", 
-                       $renderDir, $item, $basedir, $commentRenderDir);
+            if (needUpdate (["$source/$item/index.xml", "$source/$item/metadata.xml", $mainstylesheet], ["$source/$item/index.html"]) || ($optForce))
+            {
+               print "Transforming $source/$item xml->html\n";
+               transform ($mainstylesheet, "$source/$item/index.xml", "$source/$item/index.html", 
+                          $renderDir, $item, $basedir, $commentRenderDir);
+            }              
          }
       }         
    }
@@ -584,17 +588,17 @@ EOC
    if ($optDir == 1) 
    { 
       print "Generating metadata directories\n";
-      generateDir ($metadataDir, '', '../', $commentRenderDir); 
+      generateDir ($metadataDir, '', '../', $commentRenderDir, $optForce); 
    }
    if ($optThumbs == 1) 
    { 
       print "Generating thumbnails\n";
-      generateThumbs ("$renderDir/collection", "$renderDir/thumbs"); 
+      generateThumbs ("$renderDir/collection", "$renderDir/thumbs", $optForce); 
    }
    if ($optComposite == 1) 
    { 
       print "Generating composite thumbnails\n";
-      generateCompositeThumbs ($metadataDir); 
+      generateCompositeThumbs ($metadataDir, '', $optForce); 
    }
    if ($optUsers == 1) 
    { 

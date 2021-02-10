@@ -58,11 +58,38 @@ sub displayAdminHeader
    print $cgi->header;
    print $header;
    print "<div class=\"content\">\n".
-         "<b>Manager Options</b>: ".
-         "<a href=\"moderate.pl\">Moderate</a> | ".
-         "<a href=\"manage.pl\">Manage Files</a> | ".
-         "<a href=\"webimport.pl\">Import CSVs</a> | ".
-         "<a href=\"webgenerate.pl\">Generate Site</a> | ".
-         "<a href=\"webindex.pl\">Create Index</a>\n".
+         "<div class=\"manageroptions\"><b>Manager Options</b>: \n".
+         "<div class=\"manageroption\"><form action=\"moderate.pl\"><input type=\"submit\" value=\"Moderate\"/> |</form></div>\n".
+         "<div class=\"manageroption\"><form action=\"manage.pl\"><input type=\"submit\" value=\"Manage\"/> |</form></div>\n".
+         "<div class=\"manageroption\"><form action=\"webimport.pl\">".
+           "<input type=\"submit\" value=\"Import\"/> ".
+           "<select name=\"option\">".
+           "<option value=\"metadata\">metadata</option>".
+           "<option value=\"users\">users</option>".
+           "<option value=\"comments\">comments</option>".
+           "<option value=\"uploads\">uploads</option>".
+           "<option value=\"all\">all</option>".
+           "</select> ".
+           "force <input type=\"checkbox\" name=\"force\" value=\"1\"/>".
+         " |</form></div>\n".
+         "<div class=\"manageroption\"><form action=\"webgenerate.pl\">".
+           "<input type=\"submit\" value=\"Generate\"/> ".
+           "<select name=\"option\">".
+           "<option value=\"metadata\">metadata</option>".
+           "<option value=\"website\">website pages</option>".
+           "<option value=\"users\">users</option>".
+           "<option value=\"thumbs\">thumbnails</option>".
+           "<option value=\"composite\">composite thumbnails</option>".
+           "<option value=\"all\">all</option>".
+           "</select> ".
+           "force <input type=\"checkbox\" name=\"force\" value=\"1\"/>".
+         " |</form></div>\n".
+         "<div class=\"manageroption\"><form action=\"webindex.pl\"><input type=\"submit\" value=\"Index\"/></form></div>\n".
+#         "<a href=\"moderate.pl\">Moderate</a> | ".
+#         "<a href=\"manage.pl\">Manage Files</a> | ".
+#         "<a href=\"webimport.pl\">Import CSVs</a> | ".
+#         "<a href=\"webgenerate.pl\">Generate Site</a> | ".
+#         "<a href=\"webindex.pl\">Create Index</a>".
+         "</div>\n".
          "<hr/>\n";
 }
