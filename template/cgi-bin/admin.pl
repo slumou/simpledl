@@ -32,7 +32,7 @@ if (($verify ne $verifyCheck) || ($adminCheck == 0))
 {
    sleep (3);
    
-   open ( my $hfile, "header.html");
+   open ( my $hfile, "adminheader.html");
    my @lines = <$hfile>;
    close ($hfile);
    my $header = join ('', @lines);
@@ -47,7 +47,7 @@ sub displayAdminHeader
 {
    my ($cookies) = @_;
 
-   open ( my $hfile, "header.html");
+   open ( my $hfile, "adminheader.html");
    my @lines = <$hfile>;
    close ($hfile);
    my $header = join ('', @lines);

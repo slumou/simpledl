@@ -20,6 +20,25 @@ use CSV qw (:DEFAULT);
 do "$FindBin::Bin/../../data/config/config.pl";
 
 
+# check a list of source files against a list of destination files
+sub needUpdate
+{
+   my ($source, $dest) = @_;
+   
+   foreach my $dfile (@$dest)
+   {
+      if (! -e $dfile)
+      { return 1; }
+      foreach my $sfile (@$source)
+      {
+         if (-M $sfile < -M $dfile)
+         { return 1; }
+      }
+   }
+   return 0;
+}
+
+
 # convert config.pl to config.xml
 sub generateConfigXML
 {
@@ -345,7 +364,8 @@ sub generateHTML
       {
          my $filename = $1;
          if (($filename ne 'config') &&
-             (( -M "$source$offset/$filename.html" > -M "$source$offset/$afile" ) || ($optForce == 1)) )
+             (needUpdate (["$source$offset/$afile", $mainstylesheet], ["$source$offset/$filename.html"]) || ($optForce == 1)) 
+            )
          {
             print "Transforming $source$offset/$afile xml->html\n";
             transform ($mainstylesheet, "$source$offset/$afile", "$source$offset/$filename.html", 
@@ -416,13 +436,20 @@ sub generateWebsite
    # convert xml to html
    generateHTML ($renderDir, '', '', 0, $optForce, $commentRenderDir);
    
-   # create header for scripts
-   if ((-M "$cgiDir/header.html" > -M "$cgiDir/header.xml" ) || ($optForce == 1))
+   # create headers for scripts
+   if (needUpdate (["$cgiDir/header.xml", $mainstylesheet], ["$cgiDir/header.html"]) || ($optForce == 1))
    {
+      print "Updating header.html\n";
       transform ($mainstylesheet, "$cgiDir/header.xml", "$cgiDir/header.html", $renderDir, '', '../', $commentRenderDir);
    }
-   if ((-M "$cgiDir/popupheader.html" > -M "$cgiDir/popupheader.xml" ) || ($optForce == 1))
+   if (needUpdate (["$cgiDir/adminheader.xml", $mainstylesheet], ["$cgiDir/adminheader.html"]) || ($optForce == 1))
+   {
+      print "Updating adminheader.html\n";
+      transform ($mainstylesheet, "$cgiDir/adminheader.xml", "$cgiDir/adminheader.html", $renderDir, '', '../', $commentRenderDir);
+   }
+   if (needUpdate (["$cgiDir/popupheader.xml", $mainstylesheet], ["$cgiDir/popupheader.html"]) || ($optForce == 1))
    {   
+      print "Updating popupheader.html\n";
       transform ($mainstylesheet, "$cgiDir/popupheader.xml", "$cgiDir/popupheader.html", $renderDir, '', '../', $commentRenderDir);
    }
 }
