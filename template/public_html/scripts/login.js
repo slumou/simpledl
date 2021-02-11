@@ -526,3 +526,42 @@ function toggleAttachment ()
    document.getElementById('addcomment-button').innerHTML = 'Add Comment and Attachment';
    document.getElementById('addcomment-button2').style = "display: none";
 }
+
+// user pages: to dynamically sort tables
+
+function tableSort (table, column, asc)
+{
+   var tab = document.getElementById (table);
+   var rows = tab.getElementsByTagName ("tr").length-1;
+   for ( var outer = 1; outer<rows; outer++ )
+   {
+      var valOuter =
+      tab.getElementsByTagName("tr").item(outer).getElementsByTagName("td").item(column).innerText;      
+      var choose = outer;
+      for ( var inner=outer+1; inner<=rows; inner++ )
+      {
+         var valInner =
+         tab.getElementsByTagName("tr").item(inner).getElementsByTagName("td").item(column).innerText;
+         if ((asc == 1) && (valInner < valOuter))
+         {
+            valOuter = valInner;
+            choose = inner;
+         }
+         else if ((asc == 2) && (valInner > valOuter))
+         {
+            valOuter = valInner;
+            choose = inner;
+         }
+      }   
+      if (outer != choose)
+      {
+         var temp = tab.getElementsByTagName("tr").item(outer).innerHTML;
+         tab.getElementsByTagName("tr").item(outer).innerHTML
+         =
+         tab.getElementsByTagName("tr").item(choose).innerHTML;
+         tab.getElementsByTagName("tr").item(choose).innerHTML
+         = temp;
+      }
+   }
+}
+

@@ -58,10 +58,12 @@ sub loadEntities
             my $item = <$ifile>;
             my $title = <$ifile>;
             my $role = <$ifile>;
+            my $date = <$ifile>;
             chomp $item;
             chomp $title;
             chomp $role;
-            push (@{$entity_index->{$name}}, [ $item, $title, $role ]);
+            chomp $date;
+            push (@{$entity_index->{$name}}, [ $item, $title, $role, $date ]);
          }   
       }
       close ($ifile);
@@ -83,6 +85,7 @@ sub saveEntities
          print $ifile $entity_index->{$name}->[$i+3]->[0]."\n";
          print $ifile $entity_index->{$name}->[$i+3]->[1]."\n";
          print $ifile $entity_index->{$name}->[$i+3]->[2]."\n";
+         print $ifile $entity_index->{$name}->[$i+3]->[3]."\n";
       }
    }
    close ($ifile);
@@ -102,7 +105,7 @@ sub addEntityMetadata
 
 sub addEntityItemRole
 {
-   my ($authname, $item, $title, $role) = @_;   
+   my ($authname, $item, $title, $role, $date) = @_;   
    $authname =~ s/[\n\r]//go;
    $item =~ s/[\n\r]//go;
    $title =~ s/[\n\r]//go;
@@ -114,14 +117,15 @@ sub addEntityItemRole
    for ( my $i=3; $i<=$#{$entity_index->{$name}}; $i++ )
    {
       if (($entity_index->{$name}->[$i]->[0] eq $item) && 
-          ($entity_index->{$name}->[$i]->[2] eq $role))
+          ($entity_index->{$name}->[$i]->[2] eq $role) &&
+          ($entity_index->{$name}->[$i]->[3] eq $date))
       {
          $found = 1; 
          last; 
       }
    }
    if ($found == 0)
-   { push (@{$entity_index->{$name}}, [ $item, $title, $role ]); }
+   { push (@{$entity_index->{$name}}, [ $item, $title, $role, $date ]); }
    return $entity_index->{$name}->[1];
 }
 
@@ -145,6 +149,7 @@ sub createEntityFiles
          print $ifile " <item>".$entity_index->{$name}->[$i+3]->[0]."</item>\n";
          print $ifile " <title>".$entity_index->{$name}->[$i+3]->[1]."</title>\n";
          print $ifile " <role>".$entity_index->{$name}->[$i+3]->[2]."</role>\n";
+         print $ifile " <date>".$entity_index->{$name}->[$i+3]->[3]."</date>\n";
          print $ifile "</contribution>\n";
       }
       print $ifile "</user>\n";

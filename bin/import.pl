@@ -513,7 +513,7 @@ sub createXML
          my $actorId = '';
          if ($itemlocation ne '')
          { 
-            $actorId = addEntityItemRole ($eventActors_list[$i], $itemlocation, $title, $eventTypes_list[$i]);
+            $actorId = addEntityItemRole ($eventActors_list[$i], $itemlocation, $title, $eventTypes_list[$i], $eventDates_list[$i]);
             $actorId = " id=\"internal$actorId\""; 
          }
          print $file "   <event>\n".

@@ -421,8 +421,8 @@ sub main
 #   print "Deleting old indices\n";
 #   delete_indices ();
 
-#   foreach my $toplevel ( "users" )
-   foreach my $toplevel ( "main" )
+   foreach my $toplevel ( "users" )
+#   foreach my $toplevel ( "main" )
 #   foreach my $toplevel ( keys %{$indexers} )
    {
       print "Processing $toplevel\n";
