@@ -229,11 +229,13 @@ function doSearch (aprefix)
                      ids[bif.item(k).getAttribute ('id')]=1;
                   }
                   var new_ranked = new Array ();
+                  accum = new Array ();
                   var l=0;
                   for ( var k=0; k<ranked.length; k++ )
                      if (ids[ranked[k]] == 1)
                      {
                         new_ranked[l] = ranked[k];
+                        accum[ranked[k]] = 1;
                         l++;
                      }
                   ranked = new_ranked;

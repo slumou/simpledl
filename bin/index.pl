@@ -32,7 +32,7 @@ sub index_dir
          {
             ($fileid) = index_dir ($ifmap, $primary, $filepath.'/'.$afile, $other, $if, $ifb, $sort, $fmap, $titlemap, $fileid, $titlematch, $fileexclude, $browselocations);
          }
-         elsif (($afile =~ /^[^\.]+\.xml$/) && (! defined $fileexclude->{$afile}))
+         elsif (($afile =~ /^[^\.]+\.xml$/) && (! defined $fileexclude->{$afile}) && (! defined $fileexclude->{$filepath.'/'.$afile}))
          {
             ($fileid) = index_file ($ifmap, $primary, substr ($filepath.'/'.$afile, 2), $other, $if, $ifb, $sort, $fmap, $titlemap, $fileid, $titlematch, $fileexclude, $browselocations);
          }
@@ -115,6 +115,8 @@ sub index_file
             {
                my $d = $node->getChildNodes->item(0)->toString; 
                $data .= ' '.$d;
+               # eliminate leading spaces
+               $d =~ s/^\s+//;
                foreach my $bfield (keys %{$browselocations->{$field}})
                {
                   index_browse_data ($bfield, $d, $ifb, $fileid);
@@ -127,8 +129,10 @@ sub index_file
          }
 #      }
 #      print "$field $data $ifmap->{$field} \n";
+         # eliminate leading spaces
+         $data =~ s/^\s+//;
          index_search_data ($field, $data, $weight, $if, $fileid);
-         if (exists $sort->{$field})
+         if ((exists $sort->{$field}) && ($data ne ''))
          { index_sort_data ($field, $data, $sort, $fileid); }
       }   
    }
@@ -197,7 +201,14 @@ sub index_sort_data
 {
    my ($field, $data, $sort, $fileid) = @_;
    
-   $sort->{$field}->{$data} = $fileid;
+   if (! exists $sort->{$field}->{$data})
+   {
+      $sort->{$field}->{$data} = [ $fileid ];
+   }
+   else
+   {
+      push (@{$sort->{$field}->{$data}}, $fileid);
+   }   
 }
 
 
@@ -290,11 +301,13 @@ sub output_sort_if
       print $ifile "<index>\n";
       foreach my $entry (sort keys %{$sort->{$field}})
       {
-         my $id = $sort->{$field}->{$entry};
-         my $filename = $fmap->{$id};
-         my $title = $titlemap->{$id};
-         print $ifile "<sif id=\"$id\" file=\"$filename\" title=\"$title\"/>\n";
-         $done{$id} = 1;
+         foreach my $id (@{$sort->{$field}->{$entry}})
+         {
+            my $filename = $fmap->{$id};
+            my $title = $titlemap->{$id};
+            print $ifile "<sif id=\"$id\" file=\"$filename\" title=\"$title\"/>\n";
+            $done{$id} = 1;
+         }   
       }
       for ( my $id=0; $id<$fileid; $id++ )
       {
@@ -409,8 +422,8 @@ sub main
 #   delete_indices ();
 
 #   foreach my $toplevel ( "users" )
-#   foreach my $toplevel ( "main" )
-   foreach my $toplevel ( keys %{$indexers} )
+   foreach my $toplevel ( "main" )
+#   foreach my $toplevel ( keys %{$indexers} )
    {
       print "Processing $toplevel\n";
 
