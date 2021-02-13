@@ -336,23 +336,35 @@ function makeAreaFragment (namei, description, wclass)
 function makeSelectFragment (namei, description, wclass, field)
 {
    var frag = "<div class=\"mdc-select mdc-select--filled selectboxclass"+namei+" "+wclass+"\">"+
-              "<div class=\"mdc-select__anchor "+wclass+"\">"+
-              "<span class=\"mdc-select__ripple\"></span>"+
+//              "<input type=\"hidden\" name=\"mdfield"+namei+"\" readonly class=\"mdc-select__selected-text\"/>"+
+              "<div class=\"mdc-select__anchor "+wclass+"\" role=\"button\" aria-haspopup=\"listbox\" aria-expanded=\"false\">"+
+//              "<span class=\"mdc-select__ripple\"></span>"+
+//              "<i class=\"mdc-select__dropdown-icon\"></i>"+
+              "<span class=\"mdc-floating-label mdc-floating-label--float-above\">"+description+"</span>"+
               "<input type=\"text\" name=\"mdfield"+namei+"\" readonly class=\"mdc-select__selected-text\"/>"+
               "<i class=\"mdc-select__dropdown-icon\"></i>"+
-              "<span class=\"mdc-floating-label mdc-floating-label--float-above\">"+description+"</span>"+
+//              "<span class=\"mdc-select__selected-text-container\">"+
+//              "  <span id=\"demo-selected-text\" class=\"mdc-select__selected-text\"></span>"+
+//              "</span>"+
+              //"<span class=\"mdc-select__dropdown-icon\">"+
+              //"<svg class=\"mdc-select__dropdown-icon-graphic\" viewBox=\"7 10 10 5\" focusable=\"false\">"+
+              //"<polygon class=\"mdc-select__dropdown-icon-inactive\" stroke=\"none\" fill-rule=\"evenodd\" points=\"7 10 12 15 17 10\"></polygon>"+
+              //"<polygon class=\"mdc-select__dropdown-icon-active\" stroke=\"none\" fill-rule=\"evenodd\" points=\"7 15 12 10 17 15\"></polygon>"+
+              //"</svg></span>"+
               "<div class=\"mdc-line-ripple\"></div>"+
               "</div>"+
               "<div class=\"mdc-select__menu mdc-menu mdc-menu-surface "+wclass+"\">"+
               "<ul class=\"mdc-list\">"+
-              "<li class=\"mdc-list-item mdc-list-item--selected\" data-value=\"\" aria-selected=\"true\">"+
+              "<li class=\"mdc-list-item mdc-list-item--selected\" data-value=\"\" aria-selected=\"true\" role=\"option\">"+
+              "<span class=\"mdc-list-item__ripple\"></span>"+
               "</li>";
          
    var options = field.getElementsByTagName ('option');
    for ( var i=0; i<options.length; i++ )
    {
       var option = options.item(i).firstChild.data;
-      frag = frag + "<li class=\"mdc-list-item\" data-value=\""+option+"\">"+
+      frag = frag + "<li class=\"mdc-list-item\" data-value=\""+option+"\" aria-selected=\"false\" role=\"option\">"+
+                    "<span class=\"mdc-list-item__ripple\"></span>"+
                     "<span class=\"mdc-list-item__text\">"+option+"</span></li>";
    }                 
    return frag + "</ul></div></div>";
