@@ -341,7 +341,7 @@ function makeSelectFragment (namei, description, wclass, field)
 //              "<span class=\"mdc-select__ripple\"></span>"+
 //              "<i class=\"mdc-select__dropdown-icon\"></i>"+
               "<span class=\"mdc-floating-label mdc-floating-label--float-above\">"+description+"</span>"+
-              "<input type=\"text\" name=\"mdfield"+namei+"\" readonly class=\"mdc-select__selected-text\"/>"+
+              "<input type=\"text\" name=\"mdfield"+namei+"\" class=\"mdc-select__selected-text\"/>"+
               "<i class=\"mdc-select__dropdown-icon\"></i>"+
 //              "<span class=\"mdc-select__selected-text-container\">"+
 //              "  <span id=\"demo-selected-text\" class=\"mdc-select__selected-text\"></span>"+
