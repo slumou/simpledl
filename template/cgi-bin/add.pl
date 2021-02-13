@@ -12,14 +12,14 @@ use IO::Handle;
 do './common.pl';
 
 # get CGI variables
-my $cgi = new CGI;                        
+my $cgi = new CGI;
 my $comment = $cgi->param ('commentbox');
 my $item = $cgi->param ('item');
 my $user = $cgi->param ('user');
 my $userID = $cgi->param ('userID');
 my $email = $cgi->param ('email');
 my $url = $cgi->param ('url');
-my $date = strftime "%b %e %Y %H:%M:%S", localtime;
+my $date = strftime "%FT%T%z", localtime;
 my $cafile = $cgi->upload ('cafile');
 my $cafilename = $cgi->param ('cafile');
 my $motivation = $cgi->param ('motivation');
@@ -49,11 +49,10 @@ sub getModerationID
    $moderationNumber;
 }
 
-my $moderationID = getModerationID ();
-
 # user
 if ($motivation ne '')
 {
+   my $moderationID = getModerationID ();
    open ( my $cfile, '>'.$moderationDir."/$moderationID/object.xml");
    print $cfile "<object>\n".
                 "<type>user</type>\n".
@@ -80,6 +79,7 @@ if ($motivation ne '')
 # comment only - no attachment
 elsif (($gotComment == 1) && ($gotAttachment == 0))
 {
+   my $moderationID = getModerationID ();
    open ( my $cfile, '>'.$moderationDir."/$moderationID/object.xml");
    print $cfile "<object>\n".
                 "<type>comment</type>\n".
@@ -97,6 +97,7 @@ elsif (($gotComment == 1) && ($gotAttachment == 0))
 # comment plus attachment
 elsif (($gotComment == 1) && ($gotAttachment == 1))
 {
+   my $moderationID = getModerationID ();
    open ( my $cfile, '>'.$moderationDir."/$moderationID/object.xml");
    print $cfile "<object>\n".
                 "<type>commentattachment</type>\n".
@@ -123,6 +124,7 @@ elsif (($gotComment == 1) && ($gotAttachment == 1))
 # uploaded file
 elsif (($gotComment == 0) && ($gotAttachment == 1))
 {
+   my $moderationID = getModerationID ();
    open ( my $cfile, '>'.$moderationDir."/$moderationID/object.xml");
    print $cfile "<object>\n".
                 "<type>upload</type>\n".
@@ -144,10 +146,25 @@ elsif (($gotComment == 0) && ($gotAttachment == 1))
    thanks ();
 }
 
-# redirect to reload page
-else 
+# print out an error message // redirect to reload page
+# elsif (($gotComment == 0) && ($gotAttachment == 0))
+else
 {
-   print $cgi->header."<html><body></body></html>";
+   open ( my $hfile, "header.html");
+   my @lines = <$hfile>;
+   close ($hfile);
+   my $header = join ('', @lines);
+   $header =~ s/\<\/body\>.*\<\/html\>//s;
+   
+   print $cgi->header;
+   print $header;
+   print "<h1>Error!</h1>\n".
+         "<p>You submitted an empty contribution or missing file upload.  Please go back and check.</p>\n".
+         "</body></html>";
+
+#   print $cgi->header.
+#   "<html><body>".
+#   "</body></html>";
 #   print $cgi->redirect ($url);
 }
 

@@ -133,6 +133,7 @@ sub generateThumbs
                "\'$filename\'"."[0] ".                  
                "-thumbnail '200x200>' -background white -gravity center -extent 200x200 ".
                "\'$dest/$afile.jpg\' 2\>/dev/null";
+         system ($command);
 #         print $command."\n";
       }         
    }
@@ -303,7 +304,7 @@ sub generateItemStubs
    my ($item) = @_;
     
    # generate dummy comments files
-   my $commentfilename = $commentRenderDir.'/'.$item.'.xml';
+   my $commentfilename = $commentRenderDir.'/'.$item.'/metadata.xml';
    if (! -e $commentfilename)
    {
       print "Generating stub $commentfilename\n";

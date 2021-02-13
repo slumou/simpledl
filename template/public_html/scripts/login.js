@@ -297,6 +297,13 @@ var config = null;
 //if (config == null)
 //   alert ('no config');
 
+function makeNoteFragment (namei, description, wclass)
+{
+   return "<div class=\""+wclass+"\">"+
+          description+
+          "</div>";
+}
+
 function makeTextFragment (namei, description, wclass)
 {
    return "<label class=\"mdc-text-field mdc-text-field--filled "+wclass+" textboxclass"+namei+"\">"+
@@ -355,8 +362,8 @@ function makeFragment (field, i, fieldname, wclass)
 {
    var name = field.getElementsByTagName ('name').item(0).firstChild.data;
    var type = field.getElementsByTagName ('type').item(0).firstChild.data;
-   var description = field.getElementsByTagName ('description').item(0).firstChild.data;
-   if (type == 'text')
+   var description = field.getElementsByTagName ('description').item(0).innerHTML;
+   if ((type == 'text') || (type == 'date'))
    {
       return makeTextFragment (fieldname+name+i, description, wclass);
    }
@@ -378,6 +385,10 @@ function makeFragment (field, i, fieldname, wclass)
       }
       return "<div class=\"mdentrysubfieldbox\">" + fragments + "</div>";
    }
+   else if (type == "note")
+   {
+      return makeNoteFragment (fieldname+name+i, description, wclass);
+   }
    return '';
 }
 
@@ -385,7 +396,7 @@ function activate (field, i, fieldname)
 {
    var name = field.getElementsByTagName ('name').item(0).firstChild.data;
    var type = field.getElementsByTagName ('type').item(0).firstChild.data;
-   if (type == 'text')
+   if ((type == 'text') || (type == 'date'))
    {
       mdc.textField.MDCTextField.attachTo(document.querySelector('.textboxclass'+fieldname+name+i));
    }
@@ -437,10 +448,18 @@ function createForm ()
       numberOfFields++;
       numberOfReplicas[i] = 1;
       var fragment = makeFragment (fields.item(i), 1, '', 'mdentryfieldwidth');
-      var rep = '';
+      var optrep = '';
+      if (optional == '0')
+      {
+         optrep = optrep + "<button id=\"opt"+name+"\" class=\"mdc-button opt-button"+name+"\" "+
+                "onClick=\"return false\">"+
+                "<div class=\"mdc-button__ripple\"></div>"+
+                "<i class=\"material-icons mdc-icon-button__icon\">stars</i>"+
+                "</button>";
+      }
       if (repeatable == '1')
       {
-         rep = "<button id=\"add"+name+"\" class=\"mdc-button add-button"+name+"\" "+
+         optrep = optrep + "<button id=\"add"+name+"\" class=\"mdc-button add-button"+name+"\" "+
                 "onClick=\"add_field ("+i+"); return false\">"+
                 "<div class=\"mdc-button__ripple\"></div>"+
                 "<i class=\"material-icons mdc-icon-button__icon\">add_circle</i>"+
@@ -450,7 +469,7 @@ function createForm ()
       var oneclass = 'mdentryfield';
 //      if (type == 'structured')
 //         oneclass = 'mdentrysubfield';
-      form = form + "<div class=\"mdentryfieldbox\"><div class=\""+oneclass+"\">" + fragment + "</div><div class=\"mdentryplus\">" + rep + '</div><div class=\"mdentryseparator\"></div></div>'+"<div id=\"replicas"+i+"\"></div>";
+      form = form + "<div class=\"mdentryfieldbox\"><div class=\""+oneclass+"\">" + fragment + "</div><div class=\"mdentryplus\">" + optrep + '</div><div class=\"mdentryseparator\"></div></div>'+"<div id=\"replicas"+i+"\"></div>";
    }
    var formcontents = document.getElementById ('formcontents');
    formcontents.insertAdjacentHTML ('beforeend', form);
@@ -459,11 +478,16 @@ function createForm ()
       var name = fields.item(i).getElementsByTagName ('name').item(0).firstChild.data;
       var type = fields.item(i).getElementsByTagName ('type').item(0).firstChild.data;
       var repeatable = fields.item(i).getAttribute ('repeatable');
+      var optional = fields.item(i).getAttribute ('optional');
       
       activate (fields.item(i), '1', '');
-      if (repeatable == 1)
+      if (repeatable == '1')
       { 
          mdc.ripple.MDCRipple.attachTo(document.querySelector('.add-button'+name));
+      }
+      if (optional == '0')
+      { 
+         mdc.ripple.MDCRipple.attachTo(document.querySelector('.opt-button'+name));
       }
    }
 //   alert (form);
@@ -479,7 +503,7 @@ function createMetadata ()
    {
       var name = fields.item(i).getElementsByTagName ('name').item(0).firstChild.data;
       var type = fields.item(i).getElementsByTagName ('type').item(0).firstChild.data;
-      if ((type == 'text') || (type == 'area') || (type == 'select'))
+      if ((type == 'date') || (type == 'text') || (type == 'area') || (type == 'select'))
       {
          for ( var j=1; j<=numberOfReplicas[i]; j++ )
          {
@@ -498,7 +522,7 @@ function createMetadata ()
             {
                var subname = subfields.item(k).getElementsByTagName ('name').item(0).firstChild.data;
                var subtype = subfields.item(k).getElementsByTagName ('type').item(0).firstChild.data;
-               if ((subtype == 'text') || (subtype == 'area') || (subtype == 'select'))
+               if ((subtype == 'date') || (subtype == 'text') || (subtype == 'area') || (subtype == 'select'))
                {
                   var val = document.getElementById ('mdform').elements['mdfield'+name+j+subname+'1'].value;
                   if (val != "")
@@ -513,6 +537,101 @@ function createMetadata ()
    document.getElementById ('fullmetadata').value = "<" + root + ">\n" + md + "</" + root + ">\n";
 }
 
+// check if required fields are correct or other errors are present
+function validateMetadata ()
+{
+   var fields = config.getElementsByTagName ('field');
+   for ( var i=0; i<fields.length; i++ )
+   {
+      var name = fields.item(i).getElementsByTagName ('name').item(0).firstChild.data;
+      var type = fields.item(i).getElementsByTagName ('type').item(0).firstChild.data;
+      var optional = fields.item(i).getAttribute ('optional');
+      if ((type == 'date') || (type == 'text') || (type == 'area') || (type == 'select'))
+      {
+         var found = 0;
+         for ( var j=1; j<=numberOfReplicas[i]; j++ )
+         {
+            var val = document.getElementById ('mdform').elements['mdfield'+name+j].value;
+            if (val != "")
+            {
+               found = 1;
+               if (type == 'date')
+               {
+                  if (! /([0-9]{4})-(1[0-2]|0[1-9])-(3[01]|[0-2][1-9])(T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9]))?/.test (val))
+                  {
+                     var description = fields.item(i).getElementsByTagName ('description').item(0).firstChild.data;
+                     alert ("Invalid date field\n"+name+"\n"+description);
+                     return false;
+                  }
+               }
+            }
+         }
+         if ((found == 0) && (optional == '0'))
+         {
+            var description = fields.item(i).getElementsByTagName ('description').item(0).firstChild.data;
+            alert ("Missing value in required field\n"+name+"\n"+description);
+            return false;
+         }
+      }
+      else if (type == 'structured')
+      {
+         var found = 0;
+         for ( var j=1; j<=numberOfReplicas[i]; j++ )
+         {
+            var subfields = fields.item(i).getElementsByTagName ('subfield');
+            var foundInner = 0;
+            for ( var k=0; k<subfields.length; k++ )
+            {
+               var subname = subfields.item(k).getElementsByTagName ('name').item(0).firstChild.data;
+               var subtype = subfields.item(k).getElementsByTagName ('type').item(0).firstChild.data;
+               if ((subtype == 'text') || (subtype == 'area') || (subtype == 'select'))
+               {
+                  var val = document.getElementById ('mdform').elements['mdfield'+name+j+subname+'1'].value;
+                  if (val != "")
+                     foundInner = 1;
+               }
+            }
+            if (foundInner == 1)
+               found = 1;
+         }
+         if ((found == 0) && (optional == '0'))
+         {
+            var description = fields.item(i).getElementsByTagName ('description').item(0).firstChild.data;
+            alert ("Missing value in required field\n"+name+"\n"+description);
+            return false;
+         }
+      }
+   }
+   return true;   
+}
+
+function validateContribution ()
+{
+   var comment = document.getElementById ('mdform').elements['commentbox'].value;
+   if (value == '')
+   {
+      alert ('Missing text of contribution');
+      return false;
+   }   
+   else
+      return true;   
+}
+
+// validate, create MD and then return true to allow submitting of form
+function submitMetadata ()
+{
+   var valid;
+   if (caboxstatus == 0)
+      valid = validateContribution ();
+   else   
+      valid = validateMetadata ();
+   if (valid)
+   {
+      createMetadata ();
+   }
+   return valid;
+}
+
 var caboxstatus = 0;
 
 function toggleAttachment ()
@@ -523,7 +642,7 @@ function toggleAttachment ()
       document.getElementById('cabox').style = "display: block";
    caboxstatus = 1-caboxstatus; 
 
-   document.getElementById('addcomment-button').innerHTML = 'Add Comment and Attachment';
+   document.getElementById('addcomment-button').innerHTML = 'Submit Contribution and Attachment';
    document.getElementById('addcomment-button2').style = "display: none";
 }
 

@@ -605,9 +605,9 @@ sub importComments
          
          # merge comments into a single file
          system ("echo \'<comments>\' > \'$destination$offset/$d/metadata.xml\'; ".
-                 "cat \'$source$offset/$d.\'$maxcommentglob.xml >> \'$destination$offset/$d/metadata.xml\' 2>/dev/null; ".
+                 "cat \'$source$offset/$d/\'$maxcommentglob.xml >> \'$destination$offset/$d/metadata.xml\' 2>/dev/null; ".
                  "echo \'</comments>\' >> \'$destination$offset/$d/metadata.xml\'; ".
-                 "chmod a+w \'$destination$offset/$d/metadata.xml\'");         
+                 "chmod a+w \'$destination$offset/$d/metadata.xml\'");
          
          importComments ($metadata, $source, $destination, "$offset/$d");
       }
@@ -616,43 +616,72 @@ sub importComments
 
 sub importUploads
 {
-   my ($source, $destination) = @_;
+   my ($source, $destination, $offset, $level) = @_;
 
    # get list of uploads
-   opendir (my $dir, $source);
+   opendir (my $dir, $source.$offset);
    my @uploads = readdir ($dir);
    closedir ($dir);
-   @uploads = grep { /[0-9]/ } @uploads;
-   @uploads = sort { $b cmp $a } @uploads;
+   @uploads = grep { !/^\./ } @uploads;
+   @uploads = sort { $b <=> $a } @uploads;
    
-   # process each entry in uploads directory
-   open (my $ifile, ">$destination/index.xml");
-   print $ifile "<collection>\n<level>2</level>\n<type>series</type>\n";
+   # determine type at this level and if there is a metadata.xml
+   my $type = 'series';
+   my $gotMetadata = 0;
    foreach my $u (@uploads)
    {
-      print "Processing uploaded item: $u\n";
-
-      if (-e "$source/$u/metadata.xml")
+      if ($u eq 'metadata.xml')
       {
-         # create item directory
-         if (! -e "$destination/$u")
-         {
-            mkdir ("$destination/$u");
-         }
-         
-         # create metadata file
-         system ("cp \'$source/$u/metadata.xml\' \'$destination/$u/metadata.xml\'");
-         
-         # create index file
-         open (my $file, ">$destination/$u/index.xml");
-         print $file "<collection>\n<level>3</level>\n<type>item</type>\n</collection>\n";
-         close ($file);
-         
-         # add entry to main index
-         print $ifile "<item type=\"item\">$u</item>\n";
+         $gotMetadata = 1;
+         break;
       }
    }
+   if (($#uploads == 0) && ($gotMetadata == 1))
+   { $type = 'item'; }
+
+   # process each entry in uploads directory
+   open (my $ifile, ">$destination$offset/index.xml");
+   print $ifile "<collection>\n<level>$level</level>\n<type>$type</type>\n";
+   foreach my $u (@uploads)
+   {
+      # recurse over directories
+      if (-d "$source$offset/$u")
+      {
+         # create dest directory
+         if (! -e "$destination$offset/$u")
+         { mkdir ("$destination$offset/$u"); }
+         # import at inner level
+         my $innerType = importUploads ($source, $destination, $offset.'/'.$u, $level+1);
+         print $ifile "<item type=\"$innerType\">$u</item>\n";
+      }
+      else
+      {
+         # create metadata file
+         if (needUpdate (["$source$offset/$u"], ["$destination$offset/$u"]))
+         {
+            print "Processing uploaded item: $offset\n";
+            system ("cp \'$source$offset/$u\' \'$destination$offset/$u\'");
+         }   
+      }   
+   }
    print $ifile "</collection>\n";
+   close ($ifile);
+   
+   # if no metadata file, create one
+   if (($type eq 'series') && ($gotMetadata == 0))
+   {
+      my $title = $destination.$offset;
+      if ($title =~ /\/([^\/]+)$/)
+      { $title = $1; }
+   
+      open (my $ifile, ">$destination$offset/metadata.xml");
+      print $ifile "<item>\n".
+                   "<title>$title</title>\n".
+                   "</item>\n";
+      close ($ifile);
+   }
+   
+   return $type;
 }
 
 # main program body
@@ -724,7 +753,7 @@ EOC
    if ($optUploads == 1)
    {
       print "Importing uploads\n";
-      importUploads ($uploadDir, "$metadataDir/$uploadMetadataLocation");
+      importUploads ($uploadDir, "$metadataDir/$uploadMetadataLocation", '', 2);
    }
 }
 

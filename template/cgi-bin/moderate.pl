@@ -11,13 +11,15 @@ use XML::DOM;
 use XML::DOM::XPath;
 
 do './admin.pl';
+do './mime.pl';
 
-my $uploadMetadataLocation = 'Public Depot';
-my $uploadObjectLocation = 'Public Depot';
+#my $uploadMetadataLocation = 'Public Depot';
+#my $uploadObjectLocation = 'Public Depot';
 
 # get CGI variables
 my $action = $cgi->param ('action');
 my $item = $cgi->param ('item');
+my $path = $cgi->param ('path');
 
 # possible actions for this script
 if ($action eq '')
@@ -26,6 +28,10 @@ if ($action eq '')
 if ($action eq 'list')
 { 
    listModeration (); 
+}
+elsif (($action eq 'downloadfile') && ($path ne ''))
+{
+   downloadFile ($path);
 }
 elsif (($action eq 'approve') && ($item ne ''))
 {
@@ -39,6 +45,35 @@ elsif (($action eq 'deny') && ($item ne ''))
 }
 
 exit;
+
+# download a file
+sub downloadFile
+{
+   my ($path) = @_;
+
+   my $filename = $path;
+   if ($filename =~ /\/([^\/]+)$/)
+   {
+      $filename = $1;
+   }
+
+   $path = $moderationDir.'/'.$path;
+
+   if (-e $path)
+   {
+      print "Content-type: ".mime ($path)."\n".
+            "Content-Disposition: attachment; filename=$filename;\n".
+            "Cache-control: max-age=300, public\n\n";
+      open (FILE, $path);
+      my @contents = <FILE>;
+      print @contents;
+      close (FILE);
+   }
+   else 
+   {
+      print "Content-type: text/plain\n\nError\n";
+   }
+}
 
 # extract a single value from an XML tree based on its node's XPath
 sub getValues
@@ -63,8 +98,8 @@ sub listModeration
    closedir ($mdir);
    @files = grep { /[0-9]/ } @files;
    
-   my $moderationtasks = $#files + 1;
-   displayAdminHeader ("Set-Cookie: moderation=$moderationtasks; Path=/\n");
+#   my $moderationtasks = $#files + 1;
+   displayAdminHeader (); #"Set-Cookie: moderation=$moderationtasks; Path=/\n");
 
    print "<h1>List of Moderation Tasks</h1>\n";
    
@@ -74,11 +109,17 @@ sub listModeration
    }
    else
    {
-      print "<table>\n".
+      print "<table class=\"moderationtable\">\n".
             "<tr><th>Date/time</th><th>Type</th><th>Details</th><th>Action</th></tr>\n";
       foreach my $task (sort { $a <=> $b } @files)
-      {           
+      {
          my $mfilename = $moderationDir."/$task/object.xml";
+         
+         if (! -e $mfilename)
+         {
+            next;
+         }
+         
          my $dtime = strftime ('%d %b %Y %H:%M:%S', localtime ((stat ($mfilename))[9]));
          my $parser = new XML::DOM::Parser;
          my $doc = $parser->parsefile ($mfilename);
@@ -91,7 +132,11 @@ sub listModeration
             my $muser = getValues ($doc, "user");
             my $memail = getValues ($doc, "email");
             my $mmotivation = getValues ($doc, "motivation");
-            $row .= "<td>Username: $muser<br/>Email: $memail<br/>Motivation : $mmotivation</td>";
+            $row .= "<td>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Username:</div><div class=\"mttext\">$muser</div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Email:</div><div class=\"mttext\">$memail</div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Motivation:</div><div class=\"mtarea\">$mmotivation</div></div>".
+                    "</td>";
          }
          elsif ($type eq 'comment')
          {
@@ -101,7 +146,11 @@ sub listModeration
             my $mdate = getValues ($doc, "date");
             my $muser = getValues ($doc, "name");
             my $mcontent = getValues ($doc, "content");
-            $row .= "<td>Username: $muser<br/>Comment on: $mlocation<br/>Comment: $mcontent</td>";
+            $row .= "<td>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Username:</div><div class=\"mttext\"><a href=\"../users/$muserID.html\">$muser</a></div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Comment on:</div><div class=\"mttext\"><a href=\"../metadata/$mlocation/index.html\">$mlocation</a></div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Comment:</div><div class=\"mtarea\">$mcontent</div></div>".
+                    "</td>";
          }
          elsif ($type eq 'commentattachment')
          {
@@ -116,7 +165,13 @@ sub listModeration
             $mmetadata =~ s/&/&amp;/go;
             $mmetadata =~ s/\</&lt;/go;
             $mmetadata =~ s/\>/&gt;/go;
-            $row .= "<td>Username: $muser<br/>Comment on: $mlocation<br/>Comment: $mcontent<br/>Filename: $mfilename<br/>Metadata:<br/>$mmetadata</td>";
+            $row .= "<td>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Username:</div><div class=\"mttext\"><a href=\"../users/$muserID.html\">$muser</a></div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Comment on:</div><div class=\"mttext\"><a href=\"../metadata/$mlocation/index.html\">$mlocation</a></div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Comment:</div><div class=\"mtarea\">$mcontent</div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Filename:</div><div class=\"mttext\"><a href=\"?action=downloadfile&path=$task/data/$mfilename\">$mfilename</a></div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Metadata:</div><div class=\"mtarea\">$mmetadata</div></div>".
+                    "</td>";
          }
          elsif ($type eq 'upload')
          {
@@ -129,7 +184,11 @@ sub listModeration
             $mmetadata =~ s/&/&amp;/go;
             $mmetadata =~ s/\</&lt;/go;
             $mmetadata =~ s/\>/&gt;/go;
-            $row .= "<td>Username: $muser<br/>Filename: $mfilename<br/>Metadata:<br/>$mmetadata</td>";
+            $row .= "<td>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Username:</div><div class=\"mttext\"><a href=\"../users/$muserID.html\">$muser</a></div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Filename:</div><div class=\"mttext\"><a href=\"?action=downloadfile&path=$task/data/$mfilename\">$mfilename</a></div></div>".
+                    "<div class=\"mtrow\"><div class=\"mtheading\">Metadata:</div><div class=\"mtarea\">$mmetadata</div></div>".
+                    "</td>";
          }
          print "<tr>".$row."<td>".
                "<form name=\"actionform1\" class=\"actionformclass\" method=\"post\" action=\"moderate.pl\">".
@@ -181,6 +240,12 @@ sub approveItem
    if ($item ne '')
    {
       my $mfilename = $moderationDir."/$item/object.xml";
+
+      if (! -e $mfilename)
+      {
+         return;
+      }   
+
       my $parser = new XML::DOM::Parser;
       my $doc = $parser->parsefile ($mfilename);
 
@@ -209,7 +274,7 @@ sub approveItem
          my $maxuserglob = join ('', map { '?' } 1..$maxuserlen);
 
          # merge user bits into a single file
-         system ("echo \'<user><type>Public Contributor</type>\' > $userRenderDir/$userID.xml; ".
+         system ("echo \'<user><type>$vocab->{'PublicContributor'}</type>\' > $userRenderDir/$userID.xml; ".
            "cat $userDir/$userID.name.xml >> $userRenderDir/$userID.xml 2>/dev/null; ".
            "cat $userDir/$userID.profile.xml >> $userRenderDir/$userID.xml 2>/dev/null; ".
            "cat $userDir/$userID.$maxuserglob.xml >> $userRenderDir/$userID.xml; ".
@@ -217,7 +282,7 @@ sub approveItem
            "chmod a+w $userRenderDir/$userID.xml");
 
          # regenerate user page
-         system ("$binDir/generate.pl users/$userID");
+         system ("$binDir/generate.pl --page users/$userID >/dev/null");
          
          # move moderation entry
          system ("mv $moderationDir/$item $moderationDir"."-approve/");
@@ -239,7 +304,7 @@ sub approveItem
          if (($type eq 'commentattachment') || ($type eq 'upload'))
          {
             $attachmentID = getID ('upload');
-            $attachmentBit = '<attachment>'.$attachmentID.'</attachment>';
+#            $attachmentBit = '<attachment>'.$attachmentID.'</attachment>';
 
             # copy attachment file to final location
             mkdir ("$renderDir/collection/$uploadObjectLocation/$attachmentID");
@@ -248,13 +313,34 @@ sub approveItem
             # create metadata entry
             my $related = '';
             if ($type eq 'commentattachment')
-            { $related = "<relatedUnitsOfDescription>$mlocation</relatedUnitsOfDescription>\n"; }
-            mkdir ("$renderDir/metadata/$uploadMetadataLocation/$attachmentID");
-            open ( my $cfile, ">$renderDir/metadata/$uploadMetadataLocation/$attachmentID/metadata.xml" );
+            { $related = "<relatedUnitsOfDescription>metadata/$mlocation</relatedUnitsOfDescription>\n"; }
+
+            # check if metadata upload location is a transformed structured location
+            my $uploadLocation = '';
+            foreach my $ulField ( keys %{$uploadStructure} )
+            {
+               my $loc = getValues ($doc, 'metadata/'.$ulField);
+               $uploadLocation = $uploadStructure->{$ulField}->{$loc};
+               if ($uploadLocation)
+               { break; }
+            }
+            if ($uploadLocation)
+            {
+               $uploadLocation = "$uploadLocation/$attachmentID";
+            }   
+            else
+            {
+               $uploadLocation = $attachmentID;
+            }
+            $attachmentBit = '<attachment>'.$uploadMetadataLocation.'/'.$uploadLocation.'</attachment>';
+            
+            # create metadata.xml
+            makePath ($uploadDir, $uploadLocation.'/metadata.xml');
+            open ( my $cfile, ">$uploadDir/$uploadLocation/metadata.xml" );
             print $cfile "<item>\n".
                          $mmetadata.
                          "<event>\n".
-                         "<eventActor>$muser</eventActor>\n".
+                         "<eventActor id=\"$muserID\">$muser</eventActor>\n".
                          "<eventType>Submission</eventType>\n".
                          "<eventDate>$mdate</eventDate>\n".
                          "</event>\n".
@@ -265,27 +351,32 @@ sub approveItem
                          "</view>\n".
                          "</item>\n";
             close ($cfile);
-            open ( my $cfile, ">$renderDir/metadata/$uploadMetadataLocation/$attachmentID/index.xml" );
-            print $cfile "<collection>\n   <type>item</type>\n   <level>2</level>\n</collection>\n";
-            close ($cfile);
+            #open ( my $cfile, ">$renderDir/metadata/$uploadMetadataLocation/$attachmentID/index.xml" );
+            #print $cfile "<collection>\n   <type>item</type>\n   <level>2</level>\n</collection>\n";
+            #close ($cfile);
             
             # update index file for uploads
-            opendir (my $dir, "$renderDir/metadata/$uploadMetadataLocation");
-            my @files = readdir ($dir);
-            closedir ($dir);
-            @files = grep { /[0-9]+/ } @files;
-            open ( my $cfile, ">$renderDir/metadata/$uploadMetadataLocation/index.xml" );
-            print $cfile "<collection>\n<level>1</level>\n";
-            foreach my $file (sort { $b <=> $a } @files)
-            {
-               print $cfile "<item type=\"item\">".$file."</item>\n";
-            }   
-            print $cfile "</collection>\n";
-            close ($cfile);
+            #opendir (my $dir, "$renderDir/metadata/$uploadMetadataLocation/$uploadLocation/..");
+            #my @files = readdir ($dir);
+            #closedir ($dir);
+            #@files = grep { /[0-9]+/ } @files;
+            #open ( my $cfile, ">$renderDir/metadata/$uploadMetadataLocation/$uploadLocation/../index.xml" );
+            #print $cfile "<collection>\n<level>1</level>\n";
+            #foreach my $file (sort { $b <=> $a } @files)
+            #{
+            #   print $cfile "<item type=\"item\">".$file."</item>\n";
+            #}   
+            #print $cfile "</collection>\n";
+            #close ($cfile);
+            
+            # reimport uploaded metadata and recreate indices
+            system ("$binDir/import.pl --uploads >/dev/null 2>&1");
 
             # regenerate uploaded metadata and index file
-            system ("$binDir/generate.pl \"metadata/$uploadMetadataLocation/index\" >/dev/null 2>&1");
-            system ("$binDir/generate.pl \"metadata/$uploadMetadataLocation/$attachmentID/index\" >/dev/null 2>&1");
+            system ("$binDir/generate.pl --dir >/dev/null 2>&1");
+            system ("$binDir/generate.pl --thumbs >/dev/null 2>&1");
+            #system ("$binDir/generate.pl \"metadata/$uploadMetadataLocation/index\" >/dev/null 2>&1");
+            #system ("$binDir/generate.pl \"metadata/$uploadMetadataLocation/$attachmentID/index\" >/dev/null 2>&1");
          }
 
          if (($type eq 'comment') || ($type eq 'commentattachment'))
@@ -295,12 +386,12 @@ sub approveItem
             my $maxcommentID = join ('', map { '9' } 1..$maxcommentlen);
             my $maxcommentglob = join ('', map { '?' } 1..$maxcommentlen);
             my $commentID = $maxcommentID;
-            while (-e $commentDir."/$mlocation.$commentID.xml")
+            while (-e $commentDir."/$mlocation/$commentID.xml")
             { $commentID--; }
          
             # store comment as independent file
-            makePath ($commentDir, $mlocation);
-            open ( my $cfile, '>'.$commentDir."/$mlocation.$commentID.xml" );
+            makePath ($commentDir, $mlocation.'/metadata.xml');
+            open ( my $cfile, '>'.$commentDir."/$mlocation/$commentID.xml" );
             print $cfile '<comment>'.
                          '<date>'.$mdate.'</date>'.
                          '<name>'.$muser.'</name>'.
@@ -311,14 +402,15 @@ sub approveItem
             close ($cfile);
 
             # merge comments into a single file
-            system ("echo \'<comments>\' > \'$commentRenderDir/$mlocation.xml\'; ".
-                    "cat \'$commentDir/$mlocation\'.$maxcommentglob.xml >> \'$commentRenderDir/$mlocation.xml\'; ".
-                    "echo \'</comments>\' >> \'$commentRenderDir/$mlocation.xml\'; ".
-                    "chmod a+w \'$commentRenderDir/$mlocation.xml\'");
+            #system ("echo \'<comments>\' > \'$commentRenderDir/$mlocation.xml\'; ".
+            #        "cat \'$commentDir/$mlocation\'.$maxcommentglob.xml >> \'$commentRenderDir/$mlocation.xml\'; ".
+            #        "echo \'</comments>\' >> \'$commentRenderDir/$mlocation.xml\'; ".
+            #        "chmod a+w \'$commentRenderDir/$mlocation.xml\'");
+            system ("$binDir/import.pl --comments >/dev/null 2>&1");
 
             # regenerate page
-            system ("$binDir/generate.pl \"metadata/$mlocation\" >/dev/null 2>&1");
-         }   
+            system ("$binDir/generate.pl --page \"metadata/$mlocation/index\" >/dev/null 2>&1");
+         }
 
          # move moderation entry
          system ("mv $moderationDir/$item $moderationDir"."-approve/");
