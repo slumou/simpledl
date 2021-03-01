@@ -308,7 +308,7 @@ sub generateItemStubs
    if (! -e $commentfilename)
    {
       print "Generating stub $commentfilename\n";
-      makePath ($commentRenderDir, $item);
+      makePath ($commentRenderDir, $item.'/metadata.xml');
       open (my $dummy, ">$commentfilename");
       print $dummy "<comments></comments>\n";
       close ($dummy);
