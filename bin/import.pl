@@ -7,7 +7,7 @@
 $| = 1;
 
 use Getopt::Long;
-use Unicode::Normalize qw (NFD);
+use Unicode::Normalize qw (NFC);
 use utf8;
 
 use FindBin;
@@ -88,13 +88,13 @@ sub importAuthorities
 sub makeSlug
 {
    my ($s) = @_;
-   
+#my $t=$s;   
    $s =~ s/^\s+|\s+$//g;   
-   $s = lc (NFD($s));
+   $s = lc (NFC($s));
    $s =~ s/'//g;
-   $s =~ s/[^a-z0-9\- ]//g;
+   $s =~ s/[^a-z0-9\x{00c0}-\x{00ff}\- ]//g;
    $s =~ s/ /\-/g;
-   
+#print "SLUG [$t] [$s]\n";   
    return $s;
 }
 
@@ -441,7 +441,7 @@ sub createXML
 {
    my ($filename, $itemlocation, $container, $headings, $values) = @_;
 
-   open (my $file, ">$filename");
+   open (my $file, ">:utf8", "$filename");
    print $file "<$container>\n";
    
    my ($eventActors, $eventTypes, $eventDates, $eventDescriptions, $digitalObjectPath) = ('', '', '', '', '');
@@ -640,7 +640,7 @@ sub importUploads
    { $type = 'item'; }
 
    # process each entry in uploads directory
-   open (my $ifile, ">$destination$offset/index.xml");
+   open (my $ifile, ">:utf8", "$destination$offset/index.xml");
    print $ifile "<collection>\n<level>$level</level>\n<type>$type</type>\n";
    foreach my $u (@uploads)
    {
@@ -674,7 +674,7 @@ sub importUploads
       if ($title =~ /\/([^\/]+)$/)
       { $title = $1; }
    
-      open (my $ifile, ">$destination$offset/metadata.xml");
+      open (my $ifile, ">:utf8", "$destination$offset/metadata.xml");
       print $ifile "<item>\n".
                    "<title>$title</title>\n".
                    "</item>\n";

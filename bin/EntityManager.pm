@@ -12,6 +12,8 @@ use vars qw(@ISA @EXPORT);
 
 $| = 1;
 
+use utf8;
+
 use FindBin;
 my $cwd = $FindBin::Bin;
 #do "$cwd/config.pl";
@@ -38,7 +40,7 @@ sub loadEntities
    {
       $entity_index = {};
       $entity_id = 1;
-      open ( my $ifile, "$dbDir/entity/entity_index.txt");
+      open ( my $ifile, "<:utf8", "$dbDir/entity/entity_index.txt");
       while ( my $authname = <$ifile> )
       {
          chomp $authname;
@@ -72,7 +74,7 @@ sub loadEntities
 
 sub saveEntities
 {
-   open ( my $ifile, ">$dbDir/entity/entity_index.txt");
+   open ( my $ifile, ">:utf8", "$dbDir/entity/entity_index.txt");
    foreach my $name ( keys %{$entity_index} )
    {
       print $ifile $entity_index->{$name}->[0]."\n";
@@ -138,7 +140,7 @@ sub createEntityFiles
       my $id = $entity_index->{$name}->[1];
       my $metadata = $entity_index->{$name}->[2];
       $metadata =~ s/CRLF/\n/go;
-      open ( my $ifile, ">$entity_user_location/internal$id.xml");
+      open ( my $ifile, ">:utf8", "$entity_user_location/internal$id.xml");
       print $ifile "<user>\n<type>Commissioned Contributor</type>\n";
       print $ifile "<name>$authname</name>\n";
       print $ifile "$metadata\n";

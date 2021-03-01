@@ -20,7 +20,7 @@ sub getCSV
 {
    my ($filename) = @_;
 
-   open (my $f, "<$filename");
+   open (my $f, "<:utf8", "$filename");
    my @data = <$f>;
    close ($f);
    
