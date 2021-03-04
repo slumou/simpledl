@@ -387,10 +387,10 @@ sub importDir
    }
    
    # prefix each directory, to create list of source spreadsheets
-   @d = map { "$source$offset/$_" } @d; 
-   
+   @dirs = map { "$source$offset/$_" } @dirs; 
+#print "*** [".join ('] [', @dirs)."]\n";   
    # output index file
-   if ((needUpdate (\@d, ["$destination$offset/index.xml"])) || ($optForce))
+   if ((needUpdate (\@dirs, ["$destination$offset/index.xml"])) || ($optForce))
    {
       print "Generating $destination$offset/index.xml\n";
       createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @items), $level, $LoD ]);
