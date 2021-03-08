@@ -687,35 +687,21 @@ function tableSort (table, column, asc)
 {
    var tab = document.getElementById (table);
    var rows = tab.getElementsByTagName ("tr").length-1;
-   for ( var outer = 1; outer<rows; outer++ )
+   var values = new Array ();   
+   for ( var i=1; i<=rows; i++ )
    {
-      var valOuter =
-      tab.getElementsByTagName("tr").item(outer).getElementsByTagName("td").item(column).innerText;      
-      var choose = outer;
-      for ( var inner=outer+1; inner<=rows; inner++ )
-      {
-         var valInner =
-         tab.getElementsByTagName("tr").item(inner).getElementsByTagName("td").item(column).innerText;
-         if ((asc == 1) && (valInner < valOuter))
-         {
-            valOuter = valInner;
-            choose = inner;
-         }
-         else if ((asc == 2) && (valInner > valOuter))
-         {
-            valOuter = valInner;
-            choose = inner;
-         }
-      }   
-      if (outer != choose)
-      {
-         var temp = tab.getElementsByTagName("tr").item(outer).innerHTML;
-         tab.getElementsByTagName("tr").item(outer).innerHTML
-         =
-         tab.getElementsByTagName("tr").item(choose).innerHTML;
-         tab.getElementsByTagName("tr").item(choose).innerHTML
-         = temp;
-      }
+      var cell = tab.getElementsByTagName("tr").item(i);
+      values[i-1] = {text:cell.getElementsByTagName("td").item(column).innerText, html:cell.innerHTML, position:i};
    }
+
+   if (asc==1)
+      values.sort ( function (a, b) { return a.text.localeCompare (b.text); } );
+   else if (asc == 2)
+      values.sort ( function (a, b) { return b.text.localeCompare (a.text); } );
+
+   for ( var i=1; i<=rows; i++ )
+   {
+      tab.getElementsByTagName("tr").item(i).innerHTML=values[i-1].html;
+   }   
 }
 
