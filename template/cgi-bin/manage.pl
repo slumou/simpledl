@@ -61,6 +61,7 @@ sub createFolder
    my ($path, $folder) = @_;
    
    mkdir ($path.'/'.$folder);
+   system ("chmod a+rx \"$path/$folder\"");
 }
 
 # download a file
@@ -139,6 +140,7 @@ sub uploadFile
    else
    {
       storeFile ($uploadfile, $path.'/'.$uploadfilename);
+      system ("chmod a+r \"$path/$uploadfilename\"");
 #      storeFile ($uploadfile, '../../'.$path.'/'.$uploadfilename);
    }   
 }
