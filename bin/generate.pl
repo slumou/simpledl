@@ -19,6 +19,12 @@ use CSV qw (:DEFAULT);
 
 do "$FindBin::Bin/../../data/config/config.pl";
 
+use XML::LibXSLT;
+use XML::LibXML;
+my $xslt = XML::LibXSLT->new();
+my $styleDoc = XML::LibXML->load_xml(location=>$mainstylesheet, no_cdata=>1);
+my $styleObj = $xslt->parse_stylesheet($styleDoc);
+
 
 # check a list of source files against a list of destination files
 sub needUpdate
@@ -271,12 +277,27 @@ sub generateCompositeThumbs
 sub transform
 {
    my ($stylesheet, $source, $destination, $renderDir, $item, $basedir, $commentRenderDir) = @_;
-   
-   system ("$xsltproc --stringparam \'Xbaserealdir\' \'$renderDir\' ".
-           " --stringparam \'item\' \'$item\' ".
-           " --stringparam \'basedir\' \'$basedir\' ".
-           " --stringparam \'commentRenderDir\' \'$commentRenderDir\' ".           
-           " $stylesheet \'$source\' > \'$destination\'");
+
+   # external system call
+#   system ("$xsltproc --stringparam \'Xbaserealdir\' \'$renderDir\' ".
+#           " --stringparam \'item\' \'$item\' ".
+#           " --stringparam \'basedir\' \'$basedir\' ".
+#           " --stringparam \'commentRenderDir\' \'$commentRenderDir\' ".           
+#           " $stylesheet \'$source\' > \'$destination\'");
+
+   # library call
+   my $source = XML::LibXML->load_xml ( location => $source );
+   my $results = $styleObj->transform ($source, 
+      XML::LibXSLT::xpath_to_string (
+         Xbaserealdir => $renderDir,
+         item => $item,
+         basedir => $basedir,
+         commentRenderDir => $commentRenderDir 
+      )
+   ); 
+   open ( my $ofile, ">:utf8", "$destination");
+   print $ofile $styleObj->output_as_chars($results);
+   close ($ofile);
 }
 
 # create hierarchy of directories
@@ -561,7 +582,10 @@ Options:
  --all        full site regeneration
  --force      force regeneration of all pages
 EOC
+      return;
    }
+
+   print "SimpleDL: Generate HTML files\n\n";
 
    # if no options, default to processing only metadata
    if (($optHelp == 0) && ($optConfig == 0) && (! $optPage) && ($optDir == 0) && ($optThumbs == 0) && ($optComposite == 0) && ($optUsers == 0) && ($optWebsite == 0) && ($optAll == 0))
@@ -585,38 +609,47 @@ EOC
    { 
       print "Generating configuration file\n";
       generateConfigXML (); 
+      print "\n";
    }
    if ($optDir == 1) 
    { 
       print "Generating metadata directories\n";
-      generateDir ($metadataDir, '', '../', $commentRenderDir, $optForce); 
+      generateDir ($metadataDir, '', '../', $commentRenderDir, $optForce);
+      print "\n";
    }
    if ($optThumbs == 1) 
    { 
       print "Generating thumbnails\n";
       generateThumbs ("$renderDir/collection", "$renderDir/thumbs", $optForce); 
+      print "\n";
    }
    if ($optComposite == 1) 
    { 
       print "Generating composite thumbnails\n";
       generateCompositeThumbs ($metadataDir, '', $optForce); 
+      print "\n";
    }
    if ($optUsers == 1) 
    { 
       print "Generating user profiles\n";   
       generateUsers ($userRenderDir, $renderDir,  $commentRenderDir, $optForce); 
+      print "\n";
    }
    if ($optWebsite == 1) 
    { 
       print "Generating website\n";
       generateWebsite ($renderDir, $templateDir, $optForce, $commentRenderDir); 
+      print "\n";
    }
    if ($optPage)
    { 
       print "Generating page $optPage\n";
-      generatePage ($optPage, $renderDir, $commentRenderDir); 
+      generatePage ($optPage, $renderDir, $commentRenderDir);
+      print "\n";
    }
    
+   print "SimpleDL: Generate complete\n\n";
+
 }
 
 main;

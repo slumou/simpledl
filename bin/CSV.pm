@@ -16,18 +16,25 @@ use vars qw(@ISA @EXPORT);
 use Unicode::Normalize qw (NFD);
 use utf8;
 
+use Text::CSV qw ( csv );
+
 sub getCSV
 {
    my ($filename) = @_;
+   
+   # use external module instead of pureperl version below
+   my $fields = csv ( in=>$filename, encoding=>'UTF-8' );
+   my $headings = shift @{$fields};
+   ($headings, $fields);
 
-   open (my $f, "<:utf8", "$filename");
-   my @data = <$f>;
-   close ($f);
-   
-   my @fields = CSVParse (join ("", @data));
-   my $headings = shift (@fields);
-   
-   ($headings, \@fields);
+#   open (my $f, "<:utf8", "$filename");
+#   my @data = <$f>;
+#   close ($f);
+#   
+#   my @fields = CSVParse (join ("", @data));
+#   my $headings = shift (@fields);
+#   
+#   ($headings, \@fields);
 }
 
 sub CSVParse

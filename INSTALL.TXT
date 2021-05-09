@@ -5,5 +5,7 @@ imagemagick
 xsltproc
 sudo apt-get install libxml-dom-perl
 sudo apt-get install libxml-dom-xpath-perl
+sudo apt-get install libxml-libxslt-perl
+sudo apt-get install libtext-csv-perl
 
 check /etc/ImageMagick/policy.xml to switch on PDF reading

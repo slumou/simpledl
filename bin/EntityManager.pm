@@ -22,6 +22,7 @@ my $dbDir = "$cwd/../../db";
 my $userRenderDir = "$cwd/../../public_html/users";
 
 my $entity_index = {};
+my $entity_fastindex = {};
 my $entity_id = 1;
 my $entity_user_location = $userRenderDir;
 
@@ -54,7 +55,10 @@ sub loadEntities
          my $count = <$ifile>;
          chomp $count;
          if (! defined $entity_index->{$name})
-         { $entity_index->{$name} = [ $authname, $id, $metadata ]; }
+         { 
+            $entity_index->{$name} = [ $authname, $id, $metadata ]; 
+            $entity_fastindex->{$name} = {};
+         }
          for ( my $i=0; $i<$count; $i++ )
          {
             my $item = <$ifile>;
@@ -66,6 +70,7 @@ sub loadEntities
             chomp $role;
             chomp $date;
             push (@{$entity_index->{$name}}, [ $item, $title, $role, $date ]);
+            $entity_fastindex->{$name}->{join ('|', ($item, $role, $date))} = 1;
          }   
       }
       close ($ifile);
@@ -107,27 +112,34 @@ sub addEntityMetadata
 
 sub addEntityItemRole
 {
-   my ($authname, $item, $title, $role, $date) = @_;   
+   my ($authname, $item, $title, $role, $date) = @_;
    $authname =~ s/[\n\r]//go;
    $item =~ s/[\n\r]//go;
    $title =~ s/[\n\r]//go;
    $role =~ s/[\n\r]//go;
    my $name = authToName ($authname);
    if (! defined $entity_index->{$name})
-   { $entity_index->{$name} = [ $authname, $entity_id++, '' ]; }
-   my $found == 0;
-   for ( my $i=3; $i<=$#{$entity_index->{$name}}; $i++ )
-   {
-      if (($entity_index->{$name}->[$i]->[0] eq $item) && 
-          ($entity_index->{$name}->[$i]->[2] eq $role) &&
-          ($entity_index->{$name}->[$i]->[3] eq $date))
-      {
-         $found = 1; 
-         last; 
-      }
+   { 
+      $entity_index->{$name} = [ $authname, $entity_id++, '' ]; 
+      $entity_fastindex->{$name} = {};
    }
-   if ($found == 0)
-   { push (@{$entity_index->{$name}}, [ $item, $title, $role, $date ]); }
+#   my $found == 0;
+#   for ( my $i=3; $i<=$#{$entity_index->{$name}}; $i++ )
+#   {
+#      if (($entity_index->{$name}->[$i]->[0] eq $item) && 
+#          ($entity_index->{$name}->[$i]->[2] eq $role) &&
+#          ($entity_index->{$name}->[$i]->[3] eq $date))
+#      {
+#         $found = 1; 
+#         last; 
+#      }
+#   }
+#   if ($found == 0)
+   if (! exists $entity_fastindex->{$name}->{join ('|', ($item, $role, $date))})   
+   { 
+      push (@{$entity_index->{$name}}, [ $item, $title, $role, $date ]); 
+      $entity_fastindex->{$name}->{join ('|', ($item, $role, $date))} = 1;
+   }
    return $entity_index->{$name}->[1];
 }
 
