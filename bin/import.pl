@@ -6,6 +6,7 @@
 
 $| = 1;
 
+use File::Copy;
 use Getopt::Long;
 use Unicode::Normalize qw (NFC);
 use utf8;
@@ -16,7 +17,6 @@ use EntityManager qw (:DEFAULT);
 use CSV qw (:DEFAULT);
 
 do "$FindBin::Bin/../../data/config/config.pl";
-
 
 # check a list of source files against a list of destination files
 sub needUpdate
@@ -65,7 +65,7 @@ sub importAuthorities
          # screen for authority files
          if ((defined $typeOfEntity_position) && (defined $authorizedFormOfName_position))
          {
-            print "Processing authorities file: $offset/$d\n";
+            print "ENTITIES : Processing authorities file: $offset/$d\n";
                   
             for ( my $i=0; $i<=$#$fields; $i++ )
             {
@@ -156,21 +156,10 @@ sub importDir
    my %childrenByParent = ();
    my %levelsByParent = ();
 
-   # process each entry in directory
+   # process each entry in directory - first the CSV files
    foreach my $d (@dirs)
    {
-      # if it is a directory
-      if (-d "$source$offset/$d")
-      {
-         print "Processing directory: $offset/$d\n";
-         if (! -e "$destination$offset/$d")
-         {
-            print "Creating directory $destination$offset/$d\n";
-            mkdir ("$destination$offset/$d");
-         }   
-         importDir ($source, $destination, "$offset/$d", $level+1, $optForce);
-      }
-      elsif ($d =~ /\.[cC][sS][vV]$/)
+      if ((! -d "$source$offset/$d") && ($d =~ /\.[cC][sS][vV]$/))
       {
          # print "Processing CSV file: $d\n";
          my ($headings, $fields) = getCSV ("$source$offset/$d");
@@ -192,7 +181,7 @@ sub importDir
          # check for authorities file
          if (defined $authorizedFormOfName_position)
          {
-            print "Skipping authorities file: $d\n";
+            print "METADATA : Skipping authorities file: $d\n";
             next;
          }
          
@@ -202,7 +191,7 @@ sub importDir
 #                ( defined $parentId_position ) &&
 #                ( defined $levelOfDescription_position ))
 #         {
-         print "Processing CSV file: $d\n";
+         print "METADATA : Processing CSV file: $d\n";
          
          # trim LoD fields
          if (defined $levelOfDescription_position)
@@ -320,7 +309,7 @@ sub importDir
                # write XML
                if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
                {
-                  print "Generating $LoD $destination$offset/$filename/metadata.xml\n";
+                  print "METADATA : Generating $LoD $destination$offset/$filename/metadata.xml\n";
                   if (! -e "$destination$offset/$filename")
                   {
                      # print "Creating directory $destination$offset/$filename\n";
@@ -360,17 +349,41 @@ sub importDir
                # write XML
                if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
                {
-                  print "Generating $LoD $destination$offset/$filename/metadata.xml\n";
+                  print "METADATA : Generating $LoD $destination$offset/$filename/metadata.xml\n";
                   if (! -e "$destination$offset/$filename")
                   {
-                     print "Creating directory $destination$offset/$filename\n";
+                     print "METADATA : Creating directory $destination$offset/$filename\n";
+                     #my $x = 
                      mkdir ("$destination$offset/$filename");
+                     #if (! $x) { print "X $x !! $! \n"; }
                   }
                   $items[$#items+1] = $filename.'@type@collection';
                   createXML ("$destination$offset/$filename/metadata.xml", "", "item", $headings, $fields->[$i]);
+
+                  # output blank index file if it is not there
+                  #if (! -e "$destination$offset/$filename/index.xml")
+                  #{
+                  #   print "Generating $destination$offset/$filename/index.xml\n";
+                  #   createXML ("$destination$offset/$filename/index.xml", "", "collection", [ "item", "level", "type" ], [ '', $level, $LoD ]);
+                  #}
                }
             }  
          }
+      }
+   }
+   # process each entry in directory - then the directories
+   foreach my $d (@dirs)
+   {
+      # if it is a directory
+      if (-d "$source$offset/$d")
+      {
+         print "METADATA : Processing directory: $offset/$d\n";
+         if (! -e "$destination$offset/$d")
+         {
+            print "METADATA : Creating directory $destination$offset/$d\n";
+            mkdir ("$destination$offset/$d");
+         }   
+         importDir ($source, $destination, "$offset/$d", $level+1, $optForce);
       }
    }
    
@@ -392,14 +405,14 @@ sub importDir
    # output index file
    if ((needUpdate (\@dirs, ["$destination$offset/index.xml"])) || ($optForce))
    {
-      print "Generating $destination$offset/index.xml\n";
+      print "METADATA : Generating $destination$offset/index.xml\n";
       createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @items), $level, $LoD ]);
    }
    
    # output blank metadata file if it is not there
    if (! -e "$destination$offset/metadata.xml")
    {
-      print "Generating $destination$offset/metadata.xml\n";
+      print "METADATA : Generating $destination$offset/metadata.xml\n";
       createXML ("$destination$offset/metadata.xml", "", "item", [], []);
    }
    
@@ -409,7 +422,7 @@ sub importDir
       if ((needUpdate (\@d, ["$destination$offset/$parent/index.xml"])) || ($optForce))
       {
          # output index file
-         print "Generating deferred $destination$offset/$parent/index.xml\n";
+         print "METADATA : Generating deferred $destination$offset/$parent/index.xml\n";
          createXML ("$destination$offset/$parent/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @{$childrenByParent{$parent}}), $levelsByParent{$parent}->[0], $levelsByParent{$parent}->[1] ]);
       }
    }
@@ -566,7 +579,7 @@ sub importUsers
          my $maxuserglob = join ('', map { '?' } 1..$maxuserlen);
 
          # merge user bits into a single file
-         print "importing user $userID\n";
+         print "USERS    : Importing user $userID\n";
          system ("echo \'<user><type>$vocab->{'PublicContributor'}</type>\' > $destination/$userID.xml; ".
            "cat $userDir/$userID.name.xml >> $destination/$userID.xml 2>/dev/null; ".
            "cat $userDir/$userID.profile.xml >> $destination/$userID.xml 2>/dev/null; ".
@@ -596,10 +609,10 @@ sub importComments
       # if it is a directory
       if (-d "$metadata$offset/$d")
       {
-         print "Processing item $offset/$d\n";
+         print "COMMENTS : Processing item $offset/$d\n";
          if (! -e "$destination$offset/$d")
          {
-            print "Creating directory $destination$offset/$d\n";
+            print "COMMENTS : Creating directory $destination$offset/$d\n";
             mkdir ("$destination$offset/$d");
          }
          
@@ -659,7 +672,7 @@ sub importUploads
          # create metadata file
          if (needUpdate (["$source$offset/$u"], ["$destination$offset/$u"]))
          {
-            print "Processing uploaded item: $offset\n";
+            print "UPLOADS  : Processing uploaded item: $offset\n";
             system ("cp \'$source$offset/$u\' \'$destination$offset/$u\'");
          }   
       }   
@@ -684,6 +697,21 @@ sub importUploads
    return $type;
 }
 
+# make a clean directory and archive old directory
+sub archiveClean
+{
+   my ($dir) = @_;
+
+   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime ();
+   my $stamp = sprintf ("%04d-%02d-%02d.%d", $year+1900, $mon+1, $mday, $$);
+
+   print ("CLEAN    : Moving $dir to $dir.$stamp\n");
+   move ($dir, "$dir.$stamp");
+   print ("CLEAN    : Recreating directory $dir\n");
+   mkdir ($dir);   
+}
+
+
 # main program body
 sub main
 {
@@ -692,14 +720,15 @@ sub main
    #system ("mv $cwd/../public_html/metadata $cwd/../public_html/metadata.".$timenow);
    #mkdir ("$cwd/../public_html/metadata");
 
-   my ($optForce, $optHelp, $optUsers, $optDir, $optComments, $optUploads, $optAll) = (0, 0, 0, 0, 0, 0, 0);
+   my ($optForce, $optClean, $optHelp, $optUsers, $optDir, $optComments, $optUploads, $optAll) = (0, 0, 0, 0, 0, 0, 0, 0);
    my $optionsOK = GetOptions ('help|?' => \$optHelp, 
                                'comments' => \$optComments,
                                'dir' => \$optDir,
                                'uploads' => \$optUploads,
                                'users' => \$optUsers,
                                'all' => \$optAll,
-                               'force' => \$optForce
+                               'force' => \$optForce,
+                               'clean' => \$optClean
                                );
    
    # if error or help asked for
@@ -716,8 +745,12 @@ Options:
  --users      import users
  --all        full data import
  --force      force import of data
+ --clean      clean directory first (metadata+entities/users/comments)
 EOC
+      return;
    }
+   
+   print "SimpleDL: Import Source Data\n\n";
 
    # if no options, default to processing only metadata
    if (($optHelp == 0) && ($optComments == 0) && ($optDir == 0) && ($optUploads == 0) && ($optUsers == 0) && ($optAll == 0))
@@ -731,30 +764,49 @@ EOC
    }
 
    # check each individual option   
+   if ($optUsers == 1) 
+   { 
+      print "Importing users\n";
+      if ($optClean == 1)
+      {
+         archiveClean ($userRenderDir);
+      }
+      importUsers ($userDir, $userRenderDir);
+      print "\n";
+   }
    if ($optDir == 1) 
    {
       print "Importing metadata and entities\n";
+      if ($optClean == 1)
+      {
+         archiveClean ($dbDir.'/entity');
+         archiveClean ($metadataDir);
+      }
       loadEntities ();
       importAuthorities ($spreadsheetDir);
       importDir ($spreadsheetDir, $metadataDir, '', 1, $optForce);
       saveEntities ();
       createEntityFiles ();
-   }
-   if ($optUsers == 1) 
-   { 
-      print "Importing users\n";
-      importUsers ($userDir, $userRenderDir);
+      print "\n";
    }
    if ($optComments == 1)
    {
       print "Importing comments\n";
+      if ($optClean == 1)
+      {
+         archiveClean ($commentRenderDir);
+      }
       importComments ($metadataDir, $commentDir, $commentRenderDir, '');
+      print "\n";
    }
    if ($optUploads == 1)
    {
       print "Importing uploads\n";
       importUploads ($uploadDir, "$metadataDir/$uploadMetadataLocation", '', 2);
+      print "\n";
    }
+   
+   print "SimpleDL: Import Complete\n\n";
 }
 
 main ();

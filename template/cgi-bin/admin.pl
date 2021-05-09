@@ -71,6 +71,7 @@ sub displayAdminHeader
            "<option value=\"all\">all</option>".
            "</select> ".
            "force <input type=\"checkbox\" name=\"force\" value=\"1\"/>".
+           "clean <input type=\"checkbox\" name=\"clean\" value=\"1\"/>".
          " |</form></div>\n".
          "<div class=\"manageroption\"><form action=\"webgenerate.pl\">".
            "<input type=\"submit\" value=\"Generate\"/> ".
@@ -85,11 +86,6 @@ sub displayAdminHeader
            "force <input type=\"checkbox\" name=\"force\" value=\"1\"/>".
          " |</form></div>\n".
          "<div class=\"manageroption\"><form action=\"webindex.pl\"><input type=\"submit\" value=\"Index\"/></form></div>\n".
-#         "<a href=\"moderate.pl\">Moderate</a> | ".
-#         "<a href=\"manage.pl\">Manage Files</a> | ".
-#         "<a href=\"webimport.pl\">Import CSVs</a> | ".
-#         "<a href=\"webgenerate.pl\">Generate Site</a> | ".
-#         "<a href=\"webindex.pl\">Create Index</a>".
          "</div>\n".
          "<hr/>\n";
 }

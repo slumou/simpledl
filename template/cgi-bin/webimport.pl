@@ -13,32 +13,45 @@ displayAdminHeader ();
 print "<h1>Import CSV files</h1><hr/><pre>\n";
 
 my $options = '';
+my @optionlist = ();
 if ($cgi->param ("option") eq 'metadata')
 {
-   $options = ' --dir';
+   push (@optionlist, '--dir');
 }
 elsif ($cgi->param ("option") eq 'users')
 {
-   $options = ' --users';
+   push (@optionlist, '--users');
 }
 elsif ($cgi->param ("option") eq 'comments')
 {
-   $options = ' --comments';
+   push (@optionlist, '--comments');
 }
 elsif ($cgi->param ("option") eq 'uploads')
 {
-   $options = ' --uploads';
+   push (@optionlist, '--uploads');
 }
 elsif ($cgi->param ("option") eq 'all')
 {
-   $options = ' --all';
+   push (@optionlist, '--all');
 }
 
 if ($cgi->param ("force") == 1)
 {
-   $options .= ' --force';
+   push (@optionlist, '--force');
+}
+if ($cgi->param ("clean") == 1)
+{
+   push (@optionlist, '--clean');
 }
 
-system ("cd \'$binDir\'; perl import.pl".$options);
+$options = join (' ', @optionlist);
+#print $options;
+
+#@ARGV = @optionlist;
+#unshift (@INC, $binDir); 
+#print "$binDir/import.pl";
+#do "$binDir/import.pl";
+
+system ("cd \'$binDir\'; perl import.pl ".$options);
 
 print "</pre></body></html>";
