@@ -16,21 +16,33 @@ use vars qw(@ISA @EXPORT);
 use Unicode::Normalize qw (NFD);
 use utf8;
 
-use Text::CSV qw ( csv );
+use Text::CSV;
 
 sub getCSV
 {
    my ($filename) = @_;
    
    # use external module instead of pureperl version below
-   my $fields = csv ( in=>$filename, encoding=>'UTF-8' );
+   my $csv = Text::CSV->new ( { binary => 1 } )  # should set binary attribute.
+                           or die "Cannot use CSV: ".Text::CSV->error_diag ();
+
+   my $fields = [];
+   open ( my $fh, "<:encoding(utf8)", $filename );
+   while ( my $row = $csv->getline( $fh ) ) {
+      push (@{$fields}, $row);
+   }
+   $csv->eof;
+   close ($fh);
+
+#   my $fields = csv ( in=>$filename, encoding=>'UTF-8' );
    my $headings = shift @{$fields};
    ($headings, $fields);
 
+#  quick interface to Text::CSV in later versions
 #   open (my $f, "<:utf8", "$filename");
 #   my @data = <$f>;
 #   close ($f);
-#   
+   
 #   my @fields = CSVParse (join ("", @data));
 #   my $headings = shift (@fields);
 #   
