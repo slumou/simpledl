@@ -32,7 +32,7 @@ not connected to the Internet)
   home directories
 * dependencies: libxslt/xsltproc, imagemagick, unzip
 * in the user's home directory, create "simpledl" and "public_html" directories
-* change to the simpledl directory and run "git clone https://github.com/slumou/simpledl.git"
+* change to the simpledl directory and run "git clone https://github.com/slumou/simpledl.git" .
 * copy the sample data and db directories into the home directory
 * edit data/users/1.email.xml to contain your Google account email
 * run "simpledl/bin/import.pl" to import data/config
