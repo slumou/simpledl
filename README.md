@@ -35,9 +35,9 @@ not connected to the Internet)
 * change to the simpledl directory and run "git clone https://github.com/slumou/simpledl.git"
 * copy the sample data and db directories into the home directory
 * edit data/users/1.email.xml to contain your Google account email
-* run "simple/bin/import.pl" to import data/config
-* run "simple/bin/generate.pl --all" to generate the site
-* run "simple/bin/index.pl" to index the metadata
+* run "simpledl/bin/import.pl" to import data/config
+* run "simpledl/bin/generate.pl --all" to generate the site
+* run "simpledl/bin/index.pl" to index the metadata
 * configure your Web server to point to the public_html directory and
 execute cgi scripts in the public_html/cgi-bin directory
 * visit "http://yoursite/cgi-bin/admin.pl" and log in.
