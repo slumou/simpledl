@@ -217,6 +217,13 @@ sub importDir
                my $filename = $counter;
                my $effectiveLevel = $level + 1;
                $counter++;
+               
+               # use a fixed identifier if there is one
+               my $identifier_position = getPos ($headings, "identifier");
+               if ((defined $identifier_position) && ($fields->[$i]->[$identifier_position] ne ''))
+               {
+                  $filename = $fields->[$i]->[$identifier_position];
+               }   
                   
                # check for parent entry
                my $qubitParentSlug_position = getPos ($headings, "qubitParentSlug");
@@ -303,8 +310,8 @@ sub importDir
                      $views[$k+1] =~ s/\/uploads\/fhya\/(.*)/$1/;
                      $views[$k+1] =~ s/\/uploads\/(.*)/$1/;
                   }
-                  $fields->[$i]->[$digitalObjectPath_position] = join ('|', @views);
-               }   
+                  $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, @views);
+               }
 
                # write XML
                if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
@@ -338,11 +345,15 @@ sub importDir
                {
                   if ($fields->[$i]->[$digitalObjectPath_position] =~ /uploads\/fhya\/(.*)/)
                   {
-                     $fields->[$i]->[$digitalObjectPath_position] = join ('|', ('Logo', $1));
+                     $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, ('Logo', $1));
                   }
                   elsif ($fields->[$i]->[$digitalObjectPath_position] =~ /uploads\/(.*)/)
                   {
-                     $fields->[$i]->[$digitalObjectPath_position] = join ('|', ('Logo', $1));
+                     $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, ('Logo', $1));
+                  }
+                  else
+                  {
+                     $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, ('Logo', $fields->[$i]->[$digitalObjectPath_position]));
                   }
                }   
          
@@ -406,7 +417,7 @@ sub importDir
    if ((needUpdate (\@dirs, ["$destination$offset/index.xml"])) || ($optForce))
    {
       print "METADATA : Generating $destination$offset/index.xml\n";
-      createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @items), $level, $LoD ]);
+      createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level", "type" ], [ join ($separatorClean, @items), $level, $LoD ]);
    }
    
    # output blank metadata file if it is not there
@@ -423,7 +434,7 @@ sub importDir
       {
          # output index file
          print "METADATA : Generating deferred $destination$offset/$parent/index.xml\n";
-         createXML ("$destination$offset/$parent/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', @{$childrenByParent{$parent}}), $levelsByParent{$parent}->[0], $levelsByParent{$parent}->[1] ]);
+         createXML ("$destination$offset/$parent/index.xml", "", "collection", [ "item", "level", "type" ], [ join ($separatorClean, @{$childrenByParent{$parent}}), $levelsByParent{$parent}->[0], $levelsByParent{$parent}->[1] ]);
       }
    }
 }
@@ -486,7 +497,7 @@ sub createXML
          my $value = $values->[$i];
          if ($value ne '')
          {
-            foreach my $value_bit (split ('\|', $value))
+            foreach my $value_bit (split ($separator, $value))
             {
                my $attributes = '';
                my @valueattrbit = split ('@', $value_bit);
@@ -495,18 +506,53 @@ sub createXML
                {
                   $attributes .= " $valueattrbit[$j]=\"$valueattrbit[$j+1]\"";
                }
-               $value_bit =~ s/\s+$//;
-               $value_bit =~ s/^\s+//;
-               if ($heading eq 'relatedUnitsOfDescription')
+               my $sep2 = $separator2;
+               $sep2 =~ s/\\//go;
+               if (index ($value_bit, $sep2) > -1)
                {
-                  print $file "   <$heading$attributes>".XMLEscape (URLEscape ($value_bit))."</$heading>\n";
-               }
-               elsif ($heading ne '')
+#print "FOUND $heading $value_bit $separator $separator2 \n";
+                  my $subfieldIndicator = 'a';
+                  $value_bit =~ s/\s+$//;
+                  $value_bit =~ s/^\s+//;               
+                  if ($heading ne '')
+                  {
+                     print $file "   <$heading$attributes>\n";
+                  }
+                  foreach my $value_bit2 (split ($separator2, $value_bit))
+                  {
+                     if ($heading eq 'relatedUnitsOfDescription')
+                     {
+                        print $file "      <$subfieldIndicator>".XMLEscape (URLEscape ($value_bit2))."</$subfieldIndicator>\n";
+                     }   
+                     elsif ($heading ne '')
+                     {
+                        print $file "   <$subfieldIndicator>".XMLEscape ($value_bit2)."</$subfieldIndicator>\n";
+                        if ($heading eq 'title')
+                        { $title = XMLEscape ($value_bit2); }
+                     }
+                     $subfieldIndicator++;
+                  } 
+                  if ($heading ne '')
+                  {
+                     print $file "   </$heading>\n";
+                  }
+               } 
+               else
                {
-                  print $file "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
-                  if ($heading eq 'title')
-                  { $title = XMLEscape ($value_bit); }
-               }
+                  $value_bit =~ s/\s+$//;
+                  $value_bit =~ s/^\s+//;               
+                  if ($heading eq 'relatedUnitsOfDescription')
+                  {
+                     print $file "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
+#                     print $file "   <$heading$attributes>".XMLEscape (URLEscape ($value_bit))."</$heading>\n";
+                  }
+                  elsif ($heading ne '')
+                  {
+                     print $file "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
+                     if ($heading eq 'title')
+                     { $title = XMLEscape ($value_bit); }
+                  }
+               }  
             }
          }   
       }
@@ -538,7 +584,8 @@ sub createXML
       }
    }
 
-   my @digitalObjectPath_list = split ('\|', XMLEscape ($digitalObjectPath));
+#print "***".$digitalObjectPath."\n";
+   my @digitalObjectPath_list = split ($separator, XMLEscape ($digitalObjectPath));
    for ( my $i = 0; $i <= $#digitalObjectPath_list; $i+=2 )
    {
       $digitalObjectPath_list[$i] =~ s/\s+$//;
