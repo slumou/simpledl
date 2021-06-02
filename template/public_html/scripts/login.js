@@ -705,3 +705,33 @@ function tableSort (table, column, asc)
    }   
 }
 
+// depot pages: to dynamically sort tables
+
+function divSort (table, column, asc)
+{
+   var tab = document.getElementById (table);
+   var rows = tab.children.length;
+   var values = new Array ();
+   for ( var i=0; i<rows; i++ )
+   {
+      var cell = tab.children.item(i);
+      var spanValue = '';
+      var spans = cell.getElementsByTagName ("span");
+      if ((spans.length-1) >= column)
+      { 
+         spanValue = spans.item(column).innerText; 
+      }
+      values[i] = {text:spanValue, html:cell.innerHTML, position:i};
+   }
+
+   if (asc==1)
+      values.sort ( function (a, b) { return a.text.localeCompare (b.text); } );
+   else if (asc == 2)
+      values.sort ( function (a, b) { return b.text.localeCompare (a.text); } );
+
+   for ( var i=0; i<rows; i++ )
+   {
+      tab.children.item(i).innerHTML=values[i].html;
+   }
+}
+

@@ -223,7 +223,9 @@ sub importDir
                if ((defined $identifier_position) && ($fields->[$i]->[$identifier_position] ne ''))
                {
                   $filename = $fields->[$i]->[$identifier_position];
-               }   
+                  $filename =~ s/^\s+|\s+$//g;
+                  $filename =~ s/[^a-zA-Z0-9_\-\.]/_/go;
+               }
                   
                # check for parent entry
                my $qubitParentSlug_position = getPos ($headings, "qubitParentSlug");
