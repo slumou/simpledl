@@ -219,13 +219,16 @@ sub importDir
                $counter++;
                
                # use a fixed identifier if there is one
-               my $identifier_position = getPos ($headings, "identifier");
-               if ((defined $identifier_position) && ($fields->[$i]->[$identifier_position] ne ''))
+               if ((defined $fixedidentifier) && ($fixedidentifier ne ''))
                {
-                  $filename = $fields->[$i]->[$identifier_position];
-                  $filename =~ s/^\s+|\s+$//g;
-                  $filename =~ s/[^a-zA-Z0-9_\-\.]/_/go;
-               }
+                  my $identifier_position = getPos ($headings, $fixedidentifier);
+                  if ((defined $identifier_position) && ($fields->[$i]->[$identifier_position] ne ''))
+                  {
+                     $filename = $fields->[$i]->[$identifier_position];
+                     $filename =~ s/^\s+|\s+$//g;
+                     $filename =~ s/[^a-zA-Z0-9_\-\.]/_/go;
+                  }
+               }   
                   
                # check for parent entry
                my $qubitParentSlug_position = getPos ($headings, "qubitParentSlug");
