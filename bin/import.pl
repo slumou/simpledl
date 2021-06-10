@@ -211,7 +211,7 @@ sub importDir
                $LoD = $fields->[$i]->[$levelOfDescription_position];
             }   
 
-            if ($LoD ne 'collection')
+            if (($LoD ne 'collection') && ($LoD ne 'view'))
             {
                #print "Detected $LoD metadata\n";
                my $filename = $counter;
