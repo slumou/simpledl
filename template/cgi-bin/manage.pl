@@ -132,7 +132,7 @@ sub uploadFile
       my $tempFile = '/tmp/'.$$.$uploadfilename;
       storeFile ($uploadfile, $tempFile);      
       system ("cd \"$path\"; $unzip -o \"$tempFile\" -x \'__MACOSX*\' -x \'*.DS_Store\' ".'>/dev/null 2>&1');
-      system ("cd \"$path\"; chmod -R a+r *");
+      system ("cd \"$path\"; chmod -R a+r *; find . -type d -exec chmod 755 {} +");
 #      system ("cd \"../../$path\"; $unzip -o \"$tempFile\" -x \'__MACOSX*\' -x \'*.DS_Store\' ".'>/dev/null 2>&1');
 #      system ("cd \"../../$path\"; chmod -R a+r *");
       unlink ($tempFile);
