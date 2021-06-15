@@ -4,6 +4,7 @@
 # Hussein Suleman
 # 26 October 2019
 
+use File::Copy;
 use POSIX qw(strftime);
 
 do './admin.pl';
@@ -94,10 +95,20 @@ sub deleteFile
    my ($path) = @_;
    
 #   $path = '../../'.$path;
-   if (-d $path)
-   { rmdir ($path); }
-   else
-   { unlink ($path); }
+#   if (-d $path)
+#   { 
+#      rmdir ($path); 
+      # instead of removing directory or a file, move it out of this space
+
+      my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime ();
+      my $stamp = sprintf ("%04d-%02d-%02d.%d", $year+1900, $mon+1, $mday, $$);
+
+      mkdir ("$dbDir/deletedcollection");
+      mkdir ("$dbDir/deletedcollection/$stamp");
+      move ($path, "$dbDir/deletedcollection/$stamp/");
+#   }
+#   else
+#   { unlink ($path); }
 }
 
 # store a file with a filesize limit
@@ -235,7 +246,8 @@ sub processDir
 
       # action links
       print " [<a href=\"\" onClick=\"return createFolder (\'$datasetpath$offset/$path\')\">f</a>]";
-      if (($path ne '.') && ($#files == -1))
+      if ($path ne '.')
+#      if (($path ne '.') && ($#files == -1))
       { print " [<a href=\"\" onClick=\"return deleteFile (\'$datasetpath\', \'$offset/$path\')\">d</a>]"; }
       print "<span class=\"uclass\" style=\"display: none\"> ".
             "[<a href=\"\" onClick=\"return uploadFile (\'$datasetpath$offset/$path\')\">u</a>]</span>";
