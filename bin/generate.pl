@@ -187,6 +187,8 @@ sub generateCompositeThumbs
                            { 
                               my $tfilename = $viewfile->getFirstChild->toString;
                               $tfilename =~ s/^\s+|\s+$//g;
+                              # un=URL-escape filename
+                              $tfilename =~ s/\%20/ /g;
                               push (@thumbs, $tfilename);
                            }
                         }
@@ -212,6 +214,8 @@ sub generateCompositeThumbs
 
                if (($needupdate == 1) || ($optForce))
                { 
+#               print join ("\n", @thumbs);
+
                   #print "Generating composite thumbnail: $source$offset\n";
                   my $command = "convert -type TrueColor -size 200x200 xc:grey ".
                                 "\'$source$offset/thumbnail.jpg\' 2\>/dev/null";
@@ -262,7 +266,7 @@ sub generateCompositeThumbs
                   if ($command ne '')
                   {
                      print "Generating composite thumbnail: $source$offset\n";
-                     #print $command."\n";
+#                     print $command."\n";
                      system ($command);
                   }   
                }
