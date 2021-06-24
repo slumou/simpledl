@@ -733,7 +733,7 @@ sub importUploads
    close ($ifile);
    
    # if no metadata file, create one
-   if (($type eq 'series') && ($gotMetadata == 0))
+   if (($type eq 'series') && ($gotMetadata == 0) && (! -e "$destination$offset/metadata.xml"))
    {
       my $title = $destination.$offset;
       if ($title =~ /\/([^\/]+)$/)
