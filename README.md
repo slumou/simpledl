@@ -28,11 +28,100 @@ not connected to the Internet)
 
 ## How to install on Ubuntu Linux
 
-* install Apache HTTPD server and suexec-custom set up so suexec works in
-  home directories
-* dependencies: libxslt/xsltproc, imagemagick, unzip
-* in the user's home directory, create "simpledl" and "public_html" directories
-* change to the simpledl directory and run "git clone https://github.com/slumou/simpledl.git" .
+These instructions are to install Simple DL on a standard Ubuntu Linus variant, but they should easily be adaptable to other OSes as well.
+
+1. Create a new Linux user account.  In this example the account is called *docs*.
+
+```
+sudo adduser docs
+```
+
+2. Either register a DNS name for your server or use a hosts entry to mimic this for a development machine.  Assuming the server's DNS name is docs.simpledl.net, you can set this in the hosts file by editing the first line as follows.
+
+```
+127.0.0.1       localhost docs.simpledl.net
+```
+
+3. Install Apache HTTPD server and suexec-custom set up so suexec works in home directories.  Suexec is a secure wrapper that Apache uses to execute applications as the user that owns the script.
+
+```
+sudo apt install apache2 apache2-suexec-custom
+```
+Configure suexec-custom by specifying the DocumentRoot for the server.  You can use */home* to keep all files in the home directory if this is not a widely-used production server.  If it is, it may be better to use */var/www* and then those selected users who are allowed to use Web applications can have directories within this.
+
+*Contents of /etc/apache2/suexec/www-data*
+
+    /home
+    public_html/cgi-bin
+
+Create a site configuration for the Web server.
+
+*Contents of /etc/apache2/sites-available/docs.conf*
+
+    <VirtualHost *:80>
+    ServerName docs.simpledl.net
+    DocumentRoot /home/docs/public_html
+    SuexecUserGroup docs docs
+    ScriptAlias /cgi-bin/ "/home/docs/public_html/cgi-bin/"
+    CustomLog /home/docs/log/httpd-access.log combined
+    ErrorLog /home/docs/log/httpd-error.log
+    <Directory /home/docs/public_html>
+       Options Indexes FollowSymLinks
+       AllowOverride all
+    </Directory>
+    <Directory /home/docs/public_html/cgi-bin>
+       Options ExecCGI
+       SetHandler cgi-script
+    </Directory>
+    </VirtualHost>
+
+Activate the new configuration.
+
+```
+a2ensite docs
+```
+
+Restart the Web server.
+
+```
+service apache2 restart
+```
+
+At this point you can test the server by opening a browser window and visiting the page:
+
+```
+http://docs.simpledl.net/~docs/
+```
+
+You should get a Forbidden error because the directory Apache is looking for does not exist.  This needs to be created and permissions granted for access to this.  Log in as the docs user.
+
+```
+mkdir /home/docs/public_html
+```
+git clone https://github.com/slumou/simpledl.git .
+
+Reload the page in your browser and you should see an empty listing of files.  If you still get an error, change the permissions on */home/docs* to 711 and/or the permissions on */home/docs/public_html* to 755.
+
+4. Install dependencies needed by Simple DL.  This is xsltproc, Imagemagick, unzip, and some libraries needed by Perl.
+
+```
+sudo apt install imagemagick git unzip
+sudo apt install libxml-libxslt-perl libxml-dom-perl libxml-dom-xpath-perl libtext-csv-perl
+```
+
+5. In the user's home directory, create a directory named *simpledl* and change into this directory.
+
+```
+mkdir simpledl
+cd simpledl
+```
+
+6. Obtain the source files from github by cloning the repository.
+
+```
+git clone https://github.com/slumou/simpledl.git .
+```
+
 * copy the sample data and db directories into the home directory
 * edit data/users/1.email.xml to contain your Google account email
 * run "simpledl/bin/import.pl" to import data/config
