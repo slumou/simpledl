@@ -354,16 +354,16 @@ sub create_fulltexts
 {
    my ($directory, $primary, $fulltext, $filepath)  = @_;
    
-   opendir (my $adir, $directory.'/'.$primary.'/'.$filepath);
+   opendir (my $adir, $primary.'/'.$filepath);
    while (my $afile = readdir ($adir))
    {
       if ($afile !~ /^\.+$/)
       {
-         if (-d $directory.'/'.$primary.'/'.$filepath.'/'.$afile)
+         if (-d $primary.'/'.$filepath.'/'.$afile)
          {
-            if (! -e $directory.'/'.$fulltext.'/'.$filepath.'/'.$afile)
+            if (! -e $fulltext.'/'.$filepath.'/'.$afile)
             {
-               mkdir ($directory.'/'.$fulltext.'/'.$filepath.'/'.$afile);               
+               mkdir ($fulltext.'/'.$filepath.'/'.$afile);               
             }
             create_fulltexts ($directory, $primary, $fulltext, $filepath.'/'.$afile);
          }
@@ -371,12 +371,12 @@ sub create_fulltexts
                 (! defined $file_exclude->{$afile})
                 # 2 lines below to comment out to not check for existing extractions
                 &&
-                (! -e $directory.'/'.$fulltext.'/'.$filepath.'/'.$afile)
+                (! -e $fulltext.'/'.$filepath.'/'.$afile)
                 )
          {         
             my $parser = new XML::DOM::Parser;
 #print "FILE:".$directory.'/'.$primary.'/'.$filepath.'/'.$afile."\n";
-            my $doc = $parser->parsefile ($directory.'/'.$primary.'/'.$filepath.'/'.$afile);
+            my $doc = $parser->parsefile ($primary.'/'.$filepath.'/'.$afile);
             
             my $fulltext_blob = '';
             foreach my $view ($doc->getElementsByTagName ('view'))
@@ -387,10 +387,10 @@ sub create_fulltexts
                   {
                      my $fulltextfilename = $viewfile->getFirstChild->toString;
                      if (($fulltextfilename =~ /\.[pP][dD][fF]$/) && 
-                         (-e "$renderDir/collection/$fulltextfilename"))
+                         (-e "$directory/collection/$fulltextfilename"))
                      {
                         print "Extracting fulltext from $fulltextfilename\n";
-                        open ( my $f, "pdftotext -enc ASCII7 \'$renderDir/collection/$fulltextfilename\' - |");
+                        open ( my $f, "pdftotext -enc ASCII7 \'$directory/collection/$fulltextfilename\' - |");
                         while (my $aline = <$f>)
                         {
                            $aline =~ s/[\&\<\>\'\"]/ /go;
@@ -405,7 +405,7 @@ sub create_fulltexts
             $fulltext_blob =~ s/[^a-zA-Z0-9]/ /go;
             if ($fulltext_blob ne '')
             {
-               open ( my $f, ">".$directory.'/'.$fulltext.'/'.$filepath.'/'.$afile);
+               open ( my $f, ">".$fulltext.'/'.$filepath.'/'.$afile);
                print $f "<fulltext>".$fulltext_blob."</fulltext>";
                close ($f);
             }
@@ -418,7 +418,7 @@ sub create_fulltexts
 sub main
 {
    print "Updating extracted fulltexts\n";
-#   create_fulltexts ("$cwd/../public_html", 'metadata', 'fulltext', '.');
+   create_fulltexts ($renderDir, $metadataDir, $fulltextDir, '.');
    
 #   print "Deleting old indices\n";
 #   delete_indices ();

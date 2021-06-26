@@ -561,7 +561,7 @@ sub createXML
                      if ($heading eq 'title')
                      { $title = XMLEscape ($value_bit); }
                      if ($heading eq 'date')
-                     { $cdate = XMLEscape ($value_bit2); }
+                     { $cdate = XMLEscape ($value_bit); }
                   }
                }  
             }
@@ -605,7 +605,7 @@ sub createXML
          $actorId = addEntityItemRole ($creators_list[$i], $itemlocation, $title, 'author', $cdate);
          $actorId = " id=\"internal$actorId\""; 
       }
-      print $file "   <creator$actorId>creators_list[$i]</creator>\n";
+      print $file "   <creator$actorId>$creators_list[$i]</creator>\n";
    }
 
 #print "***".$digitalObjectPath."\n";
