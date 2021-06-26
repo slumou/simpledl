@@ -51,12 +51,13 @@ cd simpledl
 git clone https://github.com/slumou/simpledl.git .
 ```
 
-4. Copy/move the *sampledata*, *sampledb* and *samplepublic_html* directories into the home directory and rename them to *data*, *db* and *public_html*.  You should then have *simpledl*, *public_html*, *data* and *db* in the home directory.
+4. Uncompress the *sampledata*, *sampledb* and *samplepublic_html* archive files into the home directory.  You should then have *simpledl*, *public_html*, *data* and *db* in the home directory.
 
 ```
-cp -a sampledata ../data
-cp -a sampledb ../db
-cp -a samplepublic_html ../public_html
+cd ..
+gzip -cd simpledl/sampledata.tgz | tar -xf -
+gzip -cd simpledl/sampledb.tgz | tar -xf -
+gzip -cd simpledl/samplepublic_html.tgz | tar -xf -
 ```
 
 5. Test the repository by opening a browser window and visiting the page:
@@ -134,7 +135,7 @@ http://docs.simpledl.net/
 
 If you get a Forbidden error, change the permissions on */home/docs* to 711 and/or the permissions on */home/docs/public_html* to 755.
 
-### Step 3: Prepare Simple DL for offline use
+### Step 3: Prepare Simple DL for offline management of repository
 
 1. Install dependencies needed by Simple DL.  This is xsltproc, Imagemagick, unzip, pdftotext and some libraries needed by Perl.
 
