@@ -28,26 +28,60 @@ not connected to the Internet)
 
 ## How to install on Ubuntu Linux
 
-These instructions are to install Simple DL on a standard Ubuntu Linus variant, but they should easily be adaptable to other OSes as well.
+These instructions are to install Simple DL on a standard Ubuntu Linux variant, but they should easily be adaptable to other OSes as well.
+
+### Step 1: Getting the sample archive and code for offline access
 
 1. Create a new Linux user account.  In this example the account is called *docs*.
 
 ```
-sudo adduser docs
+sudo adduser docsjournalctl -xe
 ```
 
-2. Either register a DNS name for your server or use a hosts entry to mimic this for a development machine.  Assuming the server's DNS name is docs.simpledl.net, you can set this in the hosts file by editing the first line as follows.
+2. Log in as the docs users.  In the user's home directory, create a directory named *simpledl* and change into this directory.
+
+```
+mkdir simpledl
+cd simpledl
+```
+
+3. Obtain the source files and sample repository from github by cloning the repository into the simpledl directory.  Do not forget the period at the end!
+
+```
+git clone https://github.com/slumou/simpledl.git .
+```
+
+4. Uncompress the *sampledata*, *sampledb* and *samplepublic_html* archive files into the home directory.  You should then have *simpledl*, *public_html*, *data* and *db* in the home directory.
+
+```
+cd ..
+gzip -cd simpledl/sampledata.tgz | tar -xf -
+gzip -cd simpledl/sampledb.tgz | tar -xf -
+gzip -cd simpledl/samplepublic_html.tgz | tar -xf -
+```
+
+5. Test the repository by opening a browser window and visiting the page:
+
+```
+file:///home/docs/public_html/index.html
+```
+-----
+
+### Step 2: Setting up your Web server for online access
+
+1. Either register a DNS name for your server or use a hosts entry to mimic this for a development machine.  Assuming the server's DNS name is docs.simpledl.net, you can set this in the */etc/hosts* file by editing the first line as follows.
 
 ```
 127.0.0.1       localhost docs.simpledl.net
 ```
 
-3. Install Apache HTTPD server and suexec-custom set up so suexec works in home directories.  Suexec is a secure wrapper that Apache uses to execute applications as the user that owns the script.
+2. Install the Apache HTTPD Web server and suexec-custom set up so suexec works in home directories.  Suexec is a secure wrapper that Apache uses to execute applications as the user that owns the script, and suexec-custom is a variation that allows you configure suexec without recompiling the Web server.
 
 ```
 sudo apt install apache2 apache2-suexec-custom
 ```
-Configure suexec-custom by specifying the DocumentRoot for the server.  You can use */home* to keep all files in the home directory if this is not a widely-used production server.  If it is, it may be better to use */var/www* and then those selected users who are allowed to use Web applications can have directories within this.
+
+Configure suexec-custom by specifying the root for scripts for the server.  You can use */home* to keep all files in the home directory if this is not a widely-used production server.  If it is, it may be better to use */var/www* and then those selected users who are allowed to use Web applications can have directories within this.
 
 *Contents of /etc/apache2/suexec/www-data*
 
@@ -75,6 +109,12 @@ Create a site configuration for the Web server.
     </Directory>
     </VirtualHost>
 
+Create a directory where log files will be stored for this repository.
+
+```
+mkdir /home/docs/log
+```
+
 Activate the new configuration.
 
 ```
@@ -87,62 +127,84 @@ Restart the Web server.
 service apache2 restart
 ```
 
-At this point you can test the server by opening a browser window and visiting the page:
+3. Test the server by opening a browser window and visiting the page:
 
 ```
-http://docs.simpledl.net/~docs/
+http://docs.simpledl.net/
 ```
 
-You should get a Forbidden error because the directory Apache is looking for does not exist.  This needs to be created and permissions granted for access to this.  Log in as the docs user.
+If you get a Forbidden error, change the permissions on */home/docs* to 711 and/or the permissions on */home/docs/public_html* to 755.
+
+### Step 3: Prepare Simple DL for offline management of repository
+
+1. Install dependencies needed by Simple DL.  This is xsltproc, Imagemagick, unzip, pdftotext and some libraries needed by Perl.
 
 ```
-mkdir /home/docs/public_html
-```
-git clone https://github.com/slumou/simpledl.git .
-
-Reload the page in your browser and you should see an empty listing of files.  If you still get an error, change the permissions on */home/docs* to 711 and/or the permissions on */home/docs/public_html* to 755.
-
-4. Install dependencies needed by Simple DL.  This is xsltproc, Imagemagick, unzip, and some libraries needed by Perl.
-
-```
-sudo apt install imagemagick git unzip
+sudo apt install imagemagick git unzip poppler-utils
 sudo apt install libxml-libxslt-perl libxml-dom-perl libxml-dom-xpath-perl libtext-csv-perl
 ```
 
-5. In the user's home directory, create a directory named *simpledl* and change into this directory.
+2. Edit data/users/1.email.xml to contain your Google account email.  This is a bootstrapping process for the admin account, and is mostly needed if you intend to use the Web interface but may also appear on some pages.
+
+3. Edit the metadata in *data/spreadsheets* and collections in *public_html/collection* to change/add/delete collections and items.
+
+Import metadata, configuration and other data into the site.
 
 ```
-mkdir simpledl
-cd simpledl
+simpledl/bin/import.pl
 ```
 
-6. Obtain the source files from github by cloning the repository.
+Index your site for search and browse operations 
 
 ```
-git clone https://github.com/slumou/simpledl.git .
+simpledl/bin/index.pl
 ```
 
-* copy the sample data and db directories into the home directory
-* edit data/users/1.email.xml to contain your Google account email
-* run "simpledl/bin/import.pl" to import data/config
-* run "simpledl/bin/generate.pl --all" to generate the site
-* run "simpledl/bin/index.pl" to index the metadata
-* configure your Web server to point to the public_html directory and
-execute cgi scripts in the public_html/cgi-bin directory
-* visit "http://yoursite/cgi-bin/admin.pl" and log in.
+Create HTML pages from the metadata XML, create thumbnails, etc.
+
+```
+simpledl/bin/generate.pl --all
+```
+
+4. Reload the page in your browser and you should see the updated archive.
+
+### Step 4: Prepare Simple DL for online configuration
+
+*Still being edited - Google changed authentication recently*
+
+1. Set up Google authentication for the site.  This will require HTTPS for your server.
+
+2. Test the login feature by clocking on login in the top-right corner.  You should be able to log into Google and then the login button will let you into the site.  Once logged in, there is an Admin link that give you the administrative interface where you can manage files and invoke the SimpleDL operations from the Web interface.
 
 
 ## How to configure the software
 
-All configuration information is in the data directory, and this gets copies
-across to public_html and/or used in generating the site.
+There are 4 directories:
+
+* simpledl is the software and this should not normally need to be edited.
+* data is where the configuration and source data are stored.
+* public_html is the rendered website, along with scripts and digital objects (in collection). collection is the only directory that is not generated by the software.
+* db is a space for temporary and extracted data, like the entity database and fulltext dumps.
+
+Most configuration is done on the data directory, and this~docs/ gets used in generating the site.
 
 * config/config.pl has the major configuration variables, including which
-  fields get indexed for search/browse.
-* website/styles/transform.xsl converts metadata and website files from
-XML->HTML, so fundamental layout can be changed here
-* website/styles/style.css is the global CSS file
+  fields get indexed for search/browse.  By default, this is set up for a subset of Dublin Core.
+* config/transform.xsl converts metadata and website files from XML->HTML, so fundamental layout can be changed here.
+* website is the specific template for this site.  Any files placed here will be copied across and XML generated into HTML.
+* website/styles/style.css is the global CSS file.
+* spreadsheets contains the CSV files used to generate the metadata.
+* comments is where user comments are stored (this is disabled by default).
+* uploads is where user uploads are stored (this is disabled by default).
+
+Creating a new repository has 3 steps:
+
+* running import.pl to create metadata in XML files from the spreadsheets
+* running index.pl to index the metadata for search/browse
+* running generate.pl to generate the website/HTML pages for metadata/thumbnails/etc.
+
+Each command has options so you can run import.pl or generate.pl on parts of the data for greater efficiency.  By default, only metadata is imported or generated.  These commands also use a "--force" option to bypass the automatic determination of what needs to be reprocessed and simply process everything.  "--clean" will delete the directories so it makes a fresh copy (thereby avoiding old files lying around).
 
 Hussein Suleman
-30 January 2021
+24 June 2021
  
