@@ -134,6 +134,8 @@ sub generateThumbs
          { $filename = "$renderDir/images/zipicon.png"; }
          elsif ($filename =~ /\.[Mm][Pp][3]$/)
          { $filename = "$renderDir/images/audioicon.png"; }
+         elsif ($filename =~ /\.[Pp][Pp][Tt]$/)
+         { $filename = "$renderDir/images/ppticon.png"; }
          # create thumbnail 
          my $command = "convert -define jpeg:size=200x200 ".
                "\'$filename\'"."[0] ".                  

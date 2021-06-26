@@ -473,7 +473,7 @@ sub createXML
    open (my $file, ">:utf8", "$filename");
    print $file "<$container>\n";
    
-   my ($eventActors, $eventTypes, $eventDates, $eventDescriptions, $digitalObjectPath) = ('', '', '', '', '');
+   my ($eventActors, $eventTypes, $eventDates, $eventDescriptions, $digitalObjectPath, $creators, $cdate) = ('', '', '', '', '', '', '');
    my $title = '';
     
    for ( my $i=0; $i<=$#$headings; $i++ )
@@ -495,6 +495,8 @@ sub createXML
       { $eventDescriptions = $values->[$i]; }
       elsif ($heading eq 'digitalObjectPath')
       { $digitalObjectPath = $values->[$i]; }
+      elsif ($heading eq 'creator')
+      { $creators = $values->[$i]; }
 
       # otherwise simply output fields
       else
@@ -528,12 +530,14 @@ sub createXML
                      if ($heading eq 'relatedUnitsOfDescription')
                      {
                         print $file "      <$subfieldIndicator>".XMLEscape (URLEscape ($value_bit2))."</$subfieldIndicator>\n";
-                     }   
+                     }
                      elsif ($heading ne '')
                      {
                         print $file "   <$subfieldIndicator>".XMLEscape ($value_bit2)."</$subfieldIndicator>\n";
                         if ($heading eq 'title')
                         { $title = XMLEscape ($value_bit2); }
+                        if ($heading eq 'date')
+                        { $cdate = XMLEscape ($value_bit2); }
                      }
                      $subfieldIndicator++;
                   } 
@@ -556,6 +560,8 @@ sub createXML
                      print $file "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
                      if ($heading eq 'title')
                      { $title = XMLEscape ($value_bit); }
+                     if ($heading eq 'date')
+                     { $cdate = XMLEscape ($value_bit2); }
                   }
                }  
             }
@@ -587,6 +593,19 @@ sub createXML
                      "      <eventDescription>$eventDescriptions_list[$i]</eventDescription>\n".
                      "   </event>\n";
       }
+   }
+   
+   # process creators as entities and add IDs to each
+   my @creators_list = split ('\|', XMLEscape ($creators));
+   for ( my $i = 0; $i <= $#creators_list; $i++ )
+   {
+      my $actorId = '';
+      if ($itemlocation ne '')
+      { 
+         $actorId = addEntityItemRole ($creators_list[$i], $itemlocation, $title, 'author', $cdate);
+         $actorId = " id=\"internal$actorId\""; 
+      }
+      print $file "   <creator$actorId>creators_list[$i]</creator>\n";
    }
 
 #print "***".$digitalObjectPath."\n";

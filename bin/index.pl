@@ -1,3 +1,5 @@
+#!/usr/bin/perl
+
 # Create all the indices needed for search and browse
 # Hussein Suleman
 # April 2019
