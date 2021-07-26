@@ -275,13 +275,19 @@ function loadCarousel ()
         {
            var src = imagelist.item(j).firstChild.data;
            var href = imagelist.item(j).getAttribute ('href');
+           var title = imagelist.item(j).getAttribute ('title');
      
            var d2 = document.createElement ("div");
            var d3 = document.createElement ("a");
            d3.setAttribute ("href", href);
            var d4 = document.createElement ("img");
            d4.setAttribute ("src", "carousel/"+src);
+           var d5 = document.createElement ("p");
+           d5.setAttribute ("class", "slider-content");
+           var d6 = document.createTextNode (title);
+           d5.appendChild (d6);
            d3.appendChild (d4);
+           d3.appendChild (d5);
            d2.appendChild (d3);
            d.appendChild (d2);
         }
