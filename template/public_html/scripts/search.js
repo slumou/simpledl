@@ -410,7 +410,12 @@ function renderUser (prefix, fn)
       var names = metadataDocument.getElementsByTagName ('user').item(0).getElementsByTagName('name');
       if (names.length > 0)
       {
-         itemfragcontent = itemfragcontent + '<div class="searchuserthumbtext"><p>'+names.item(0).firstChild.data+'</p></div>';
+         var nameText = '(undefined name)';         
+         if (names.item(0).hasChildNodes ())
+         {
+            nameText = names.item(0).firstChild.data;
+         }
+         itemfragcontent = itemfragcontent + '<div class="searchuserthumbtext"><p>'+nameText+'</p></div>';
       }
       if (itemfragcontent == '')
       { itemfragcontent = '<div class="searchuserthumbtext"><p>'+item+'</p></div>'; }
