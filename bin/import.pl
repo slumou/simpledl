@@ -83,6 +83,18 @@ sub importAuthorities
       }
    }
 }
+
+# create simple 
+sub createResolver
+{
+   my ($resolverDir, $destination, $offset, $filename) = @_;
+   
+   open (my $file, ">:utf8", "$resolverDir/$filename");
+   print $file "<html><head>";
+   print $file "<meta http-equiv=\"refresh\" content=\"0;URL='/metadata$offset/$filename/index.html\"/>";
+   print $file "</head></html>\n";
+   close ($file);    
+}
                
 # strip non-alphanumerics and lowercase strings
 sub makeSlug
@@ -129,11 +141,10 @@ sub getPos
    undef;  
 }
 
-
 # process a directory of metadata spreadsheets
 sub importDir
 {
-   my ($source, $destination, $offset, $level, $optForce) = @_;
+   my ($source, $destination, $offset, $level, $optForce, $resolverDir) = @_;
    
    mkdir ($destination);
    
@@ -227,8 +238,11 @@ sub importDir
                      $filename = $fields->[$i]->[$identifier_position];
                      $filename =~ s/^\s+|\s+$//g;
                      $filename =~ s/[^a-zA-Z0-9_\-\.]/_/go;
+                     
+                     # create simple resolver entry
+                     createResolver ($resolverDir, $destination, $offset, $filename);
                   }
-               }   
+               }
                   
                # check for parent entry
                my $qubitParentSlug_position = getPos ($headings, "qubitParentSlug");
@@ -399,7 +413,7 @@ sub importDir
             print "METADATA : Creating directory $destination$offset/$d\n";
             mkdir ("$destination$offset/$d");
          }   
-         importDir ($source, $destination, "$offset/$d", $level+1, $optForce);
+         importDir ($source, $destination, "$offset/$d", $level+1, $optForce, $resolverDir);
       }
    }
    
@@ -853,9 +867,13 @@ EOC
          archiveClean ($dbDir.'/entity');
          archiveClean ($metadataDir);
       }
+      if (! -e $resolverDir)
+      {
+         mkdir ($resolverDir);
+      }
       loadEntities ();
       importAuthorities ($spreadsheetDir);
-      importDir ($spreadsheetDir, $metadataDir, '', 1, $optForce);
+      importDir ($spreadsheetDir, $metadataDir, '', 1, $optForce, $resolverDir);
       saveEntities ();
       createEntityFiles ();
       print "\n";
