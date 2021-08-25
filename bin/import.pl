@@ -87,9 +87,9 @@ sub importAuthorities
 # create simple 
 sub createResolver
 {
-   my ($resolverDir, $destination, $offset, $filename) = @_;
+   my ($resolverDir, $destination, $offset, $filename, $uniqueId) = @_;
    
-   open (my $file, ">:utf8", "$resolverDir/$filename");
+   open (my $file, ">:utf8", "$resolverDir/$uniqueId");
    print $file "<html><head>";
    print $file "<meta http-equiv=\"refresh\" content=\"0;URL='/metadata$offset/$filename/index.html\"/>";
    print $file "</head></html>\n";
@@ -228,7 +228,7 @@ sub importDir
                my $filename = $counter;
                my $effectiveLevel = $level + 1;
                $counter++;
-               my $createUniqueId = 0;
+               my $createUniqueId = '';
                
                # use a fixed identifier if there is one
                if ((defined $fixedidentifier) && ($fixedidentifier ne ''))
@@ -241,7 +241,7 @@ sub importDir
                      $filename =~ s/[^a-zA-Z0-9_\-\.]/_/go;
                      
                      # set flag to create simple resolver entry
-                     $createUniqueId = 1;
+                     $createUniqueId = $filename;
                   }
                }
                   
@@ -282,9 +282,10 @@ sub importDir
                $levelsByParent{$filename} = [ $effectiveLevel, $LoD ];
                
                # create simple resolver entry
-               if ($createUniqueId == 1)
+               if ($createUniqueId ne '')
                {
-                  createResolver ($resolverDir, $destination, $offset, $filename);
+#                  print "*** $resolverDir, $destination, $offset, $filename $createUniqueId";
+                  createResolver ($resolverDir, $destination, $offset, $filename, $createUniqueId);
                }
                   
                # set locations for future child elements
