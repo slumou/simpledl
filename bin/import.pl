@@ -228,6 +228,7 @@ sub importDir
                my $filename = $counter;
                my $effectiveLevel = $level + 1;
                $counter++;
+               my $createUniqueId = 0;
                
                # use a fixed identifier if there is one
                if ((defined $fixedidentifier) && ($fixedidentifier ne ''))
@@ -239,8 +240,8 @@ sub importDir
                      $filename =~ s/^\s+|\s+$//g;
                      $filename =~ s/[^a-zA-Z0-9_\-\.]/_/go;
                      
-                     # create simple resolver entry
-                     createResolver ($resolverDir, $destination, $offset, $filename);
+                     # set flag to create simple resolver entry
+                     $createUniqueId = 1;
                   }
                }
                   
@@ -279,6 +280,12 @@ sub importDir
                }
                $childrenByParent{$filename} = [];
                $levelsByParent{$filename} = [ $effectiveLevel, $LoD ];
+               
+               # create simple resolver entry
+               if ($createUniqueId == 1)
+               {
+                  createResolver ($resolverDir, $destination, $offset, $filename);
+               }
                   
                # set locations for future child elements
                if ((defined $title_position) &&
