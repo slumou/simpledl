@@ -9,6 +9,8 @@ var administrator = '';
 
 // all pages: to open the login popup window
 
+// no need with getting rid of Google auth
+/*
 function login1 (url)
 {
    var w = 400;
@@ -19,6 +21,7 @@ function login1 (url)
    var loginWindow = window.open(url,"Login",settings);
    return false;
 }
+
 
 // login page: for Google login processing
 
@@ -33,6 +36,7 @@ function renderLoginButton() {
       'onfailure': onLoginFailure
    });
 }
+*/
 
 function onLoginSuccess(googleUser) {
    var username = googleUser.getBasicProfile().getName();
@@ -741,3 +745,41 @@ function divSort (table, column, asc)
    }
 }
 
+// validation for login forms
+
+function validateLoginForm ()
+{
+   if (loginform.useremail != undefined)
+   {
+      var email = loginform.useremail.value;
+      if (email == '')
+      {
+         alert ("Email address cannot be blank");
+         return false;
+      }
+      if (! /[^\@]+\@[^\.]+\..+/.test (email))
+      {
+         alert ("Invalid email address");
+         return false;
+      }
+   }
+   if (loginform.userpassword != undefined)
+   {
+      var password = loginform.userpassword.value;
+      if (password.length < 4)
+      {
+         alert ("Password too short");
+         return false;
+      }
+   }
+   if (loginform.usermotivation != undefined)
+   {
+      var motivation = loginform.usermotivation.value;
+      if (motivation == '')
+      {
+         alert ("Motivation cannot be blank");
+         return false;
+      }
+   }
+   return true;
+}

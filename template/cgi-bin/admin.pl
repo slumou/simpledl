@@ -39,6 +39,8 @@ if (($verify ne $verifyCheck) || ($adminCheck == 0))
    print $cgi->header;
    print $header;
    
+   print $verify.' '.$verifyCheck;
+   
    exit;
 }
 

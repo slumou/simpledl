@@ -62,7 +62,7 @@ if ($motivation ne '')
                 '</object>';
    close ($cfile);
    
-   open ( my $hfile, "popupheader.html");
+   open ( my $hfile, "header.html");
    my @lines = <$hfile>;
    close ($hfile);
    my $header = join ('', @lines);
@@ -71,8 +71,8 @@ if ($motivation ne '')
    print $cgi->header;
    print $header;
 
-   print "<h1>Login</h1>\n".
-         "<p>Step 4: Thank you for your request.  A moderator will consider this as soon as possible and you will hear back from us.</p>\n".
+   print "<h1>New User Application</h1>\n".
+         "<p>Thank you for your request.  A moderator will consider this as soon as possible and you will hear back from us.</p>\n".
          "</body></html>";
 }
 

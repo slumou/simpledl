@@ -132,6 +132,7 @@ sub listModeration
             my $muser = getValues ($doc, "user");
             my $memail = getValues ($doc, "email");
             my $mmotivation = getValues ($doc, "motivation");
+            $mmotivation =~ s/[\n\r]/<br\/>/go;
             $row .= "<td>".
                     "<div class=\"mtrow\"><div class=\"mtheading\">Username:</div><div class=\"mttext\">$muser</div></div>".
                     "<div class=\"mtrow\"><div class=\"mtheading\">Email:</div><div class=\"mttext\">$memail</div></div>".

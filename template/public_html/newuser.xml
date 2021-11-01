@@ -1,0 +1,69 @@
+<page-login>
+
+<div class="content">
+
+<h1>New User Application</h1>
+
+<p>Enter your details to apply for an account as a new user.</p>
+
+<form name="loginform" class="loginformclass" method="post" action="cgi-bin/login.pl" onSubmit="return validateLoginForm ()">
+
+<div class="mdentryfieldbox"><div class="mdentryfield">
+<label class="mdc-text-field mdc-text-field--filled mdc-text-field--label-floating mdentryfieldwidth useremailboxclass">
+<span class="mdc-text-field__ripple"></span>
+<input class="mdc-text-field__input" id="useremailbox" name="useremail" type="text" size="60"
+       aria-labelledby="useremailboxs"/>
+<span class="mdc-floating-label mdc-floating-label--float-above" id="useremailboxs">Enter your email address</span>
+<span class="mdc-line-ripple"></span>
+</label>
+</div>
+<div class="mdentryseparator"></div></div>
+
+<div class="mdentryfieldbox"><div class="mdentryfield">
+<label class="mdc-text-field mdc-text-field--filled mdc-text-field--label-floating mdentryfieldwidth usernameboxclass">
+<span class="mdc-text-field__ripple"></span>
+<input class="mdc-text-field__input" id="usernamebox" name="username" type="text" size="60"
+       aria-labelledby="usernameboxs"/>
+<span class="mdc-floating-label mdc-floating-label--float-above" id="usernameboxs">Enter your full name</span>
+<span class="mdc-line-ripple"></span>
+</label>
+</div>
+<div class="mdentryseparator"></div></div>
+
+<div class="mdentryfieldbox"><div class="mdentryfield">
+<label class="mdc-text-field mdc-text-field--outlined mdc-text-field--label-floating mdentryfieldwidth mdc-text-field--textarea usermotivationboxclass">
+<span class="mdc-text-field__ripple"></span>
+<textarea class="mdc-text-field__input" rows="5" cols="60" aria-labelledby="usermotivationboxs" name="usermotivation">Position:
+Affilitation:
+Motivation:</textarea>
+<span class="mdc-notched-outline">
+<span class="mdc-notched-outline__leading"></span>
+<span class="mdc-notched-outline__notch">
+ <span class="mdc-floating-label mdc-floating-label--float-above" id="usermotivationboxs">Enter a short motivation for the account&#160;&#160;&#160;&#160;&#160;</span>
+</span>
+<span class="mdc-notched-outline__trailing"></span>
+</span>
+</label>
+</div>
+<div class="mdentryseparator"></div></div>
+
+<input type="hidden" name="action" value="newuser"/>
+
+<div class="mdentryfieldbox"><div class="mdentryfield">
+<button id="loginbutton" class="addcomment-button mdc-button mdc-button--raised" type="submit">
+<span class="mdc-button__label">Submit</span></button>
+</div>
+<div class="mdentryseparator"></div></div>
+
+</form>
+
+<script>
+   mdc.textField.MDCTextField.attachTo(document.querySelector('.useremailboxclass'));
+   mdc.textField.MDCTextField.attachTo(document.querySelector('.usernameboxclass'));
+   mdc.textField.MDCTextField.attachTo(document.querySelector('.usermotivationboxclass'));
+   mdc.ripple.MDCRipple.attachTo(document.querySelector('.addcomment-button'));
+</script>
+
+</div>
+
+</page-login>

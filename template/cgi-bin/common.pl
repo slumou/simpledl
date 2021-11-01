@@ -28,3 +28,18 @@ sub getID
    close ($cfile);
    $counter;
 }
+
+# send email
+sub sendEmail
+{
+   my ($useremail, $subject, $message) = @_;
+   
+   $msg = MIME::Lite->new(
+      From     => $SMTPFrom,
+      To       => $useremail,
+      Subject  => $subject,
+      Data     => $message
+   );
+
+   my $x = $msg->send;
+}

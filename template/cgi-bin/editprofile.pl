@@ -57,16 +57,21 @@ if ($profile eq '')
    print "<div class=\"editprofile\" id=\"editprofile\">\n".
          "<form name=\"editprofileform\" class=\"editprofileformclass\" method=\"post\" action=\"editprofile.pl\">\n".
          "<input type=\"hidden\" name=\"userID\" value=\"$userID\">\n".
-         "<div class=\"mdc-text-field mdc-text-field--textarea editprofileboxclass\">\n".
-         "<textarea id=\"profilebox\" name=\"profile\" class=\"mdc-text-field__input\" rows=\"20\" cols=\"80\">$profile</textarea>\n".
-         "<div class=\"mdc-notched-outline\">\n".
-         "<div class=\"mdc-notched-outline__leading\"></div>\n".
-         "<div class=\"mdc-notched-outline__notch\"><label for=\"textarea\" class=\"mdc-floating-label\">Enter/update your profile</label></div>\n".
-         "<div class=\"mdc-notched-outline__trailing\"></div>\n".
+         "<div class=\"mdentryfieldbox\"><div class=\"mdentryfield\">\n".
+         "<label class=\"mdc-text-field mdc-text-field--textarea mdc-text-field--outlined mdc-text-field--label-floating editprofileboxclass\">\n".
+         "<span class=\"mdc-text-field__ripple\"></span>".
+         "<textarea id=\"profilebox\" name=\"profile\" class=\"mdc-text-field__input\" rows=\"20\" cols=\"80\" aria-labelledby=\"editprofileboxs\">$profile</textarea>\n".
+         "<span class=\"mdc-notched-outline\">\n".
+         "<span class=\"mdc-notched-outline__leading\"></span>\n".
+         "<span class=\"mdc-notched-outline__notch\"><span id=\"editprofileboxs\" class=\"mdc-floating-label mdc-floating-label--float-above\">Enter/update your profile&#160;&#160;&#160;</span></span>\n".
+         "<span class=\"mdc-notched-outline__trailing\"></span>\n".
+         "</span>\n".
+         "</label>\n".
          "</div>\n".
-         "</div>\n".
-         "<button class=\"editprofile-button mdc-button mdc-button--raised\" type=\"submit\">\n".
-         "<span class=\"mdc-button__label\">Save Profile</span></button>\n".
+         "<div class=\"mdentryseparator\"></div></div>\n".
+         "<div class=\"mdentryfieldbox\"><div class=\"mdentryfield\">\n".         
+         "<button class=\"editprofile-button addcomment-button mdc-button mdc-button--raised\" type=\"submit\">\n".
+         "<span class=\"mdc-button__label\">Save Profile</span></button></div></div>\n".
          "</form></div>\n".
          "<script>\n".
          "   mdc.ripple.MDCRipple.attachTo(document.querySelector(\'.editprofile-button\'));\n".
@@ -102,7 +107,7 @@ else
            "chmod a+w $userRenderDir/$userID.xml");
 
    # regenerate user page
-   system ("$binDir/generate.pl users/$userID");
+   system ("$binDir/generate.pl --page users/$userID >/dev/null");
 
    # redirect to reload page
    print $cgi->redirect ("../users/$userID.html");
