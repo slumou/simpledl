@@ -722,15 +722,16 @@ sub importComments
 
 sub importUploads
 {
-   my ($source, $destination, $offset, $level) = @_;
+   my ($source, $destination, $offset, $level, $optForce) = @_;
 
    # get list of uploads
    opendir (my $dir, $source.$offset);
    my @uploads = readdir ($dir);
    closedir ($dir);
    @uploads = grep { !/^\./ } @uploads;
+   @uploads = grep { !/\~$/ } @uploads;
    @uploads = sort { $b <=> $a } @uploads;
-   
+
    # determine type at this level and if there is a metadata.xml
    my $type = 'series';
    my $gotMetadata = 0;
@@ -757,13 +758,13 @@ sub importUploads
          if (! -e "$destination$offset/$u")
          { mkdir ("$destination$offset/$u"); }
          # import at inner level
-         my $innerType = importUploads ($source, $destination, $offset.'/'.$u, $level+1);
+         my $innerType = importUploads ($source, $destination, $offset.'/'.$u, $level+1, $optForce);
          print $ifile "<item type=\"$innerType\">$u</item>\n";
       }
       else
       {
          # create metadata file
-         if (needUpdate (["$source$offset/$u"], ["$destination$offset/$u"]))
+         if ((needUpdate (["$source$offset/$u"], ["$destination$offset/$u"])) || ($optForce))
          {
             print "UPLOADS  : Processing uploaded item: $offset\n";
             system ("cp \'$source$offset/$u\' \'$destination$offset/$u\'");
@@ -899,7 +900,7 @@ EOC
    if ($optUploads == 1)
    {
       print "Importing uploads\n";
-      importUploads ($uploadDir, "$metadataDir/$uploadMetadataLocation", '', 2);
+      importUploads ($uploadDir, "$metadataDir/$uploadMetadataLocation", '', 2, $optForce);
       print "\n";
    }
    

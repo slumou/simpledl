@@ -120,7 +120,7 @@ sub generateThumbs
       }
       # if the file does not exist and is acceptable or
       # the age of the thumb is greater than the age of the file
-      elsif (((! -e "$dest/$afile.jpg") && isAcceptedFilename ($afile))
+      elsif ((! -e "$dest/$afile.jpg")
              ||
              (-M "$dest/$afile.jpg" > -M "$source/$afile")
              ||
@@ -128,22 +128,30 @@ sub generateThumbs
             )
       {
          print "Creating thumbnail for $source/$afile\n";
-         # switch to fixed thumbnails for some files
          my $filename = "$source/$afile";
-         if ($filename =~ /\.[Zz][Ii][Pp]$/)
-         { $filename = "$renderDir/images/zipicon.png"; }
-         elsif ($filename =~ /\.[Mm][Pp][3]$/)
-         { $filename = "$renderDir/images/audioicon.png"; }
-         elsif ($filename =~ /\.[Pp][Pp][Tt]$/)
-         { $filename = "$renderDir/images/ppticon.png"; }
+         if (isAcceptedFilename ($afile))
+         {
+            # switch to fixed thumbnails for some files
+            if ($filename =~ /\.[Zz][Ii][Pp]$/)
+            { $filename = "$renderDir/images/zipicon.png"; }
+            elsif ($filename =~ /\.[Mm][Pp][3]$/)
+            { $filename = "$renderDir/images/audioicon.png"; }
+            elsif ($filename =~ /\.[Pp][Pp][Tt]$/)
+            { $filename = "$renderDir/images/ppticon.png"; }
+         }
+         else
+         # use a generic icon for unrecognised files
+         {
+            $filename = "$renderDir/images/document.png";
+         }
          # create thumbnail 
          my $command = "convert -define jpeg:size=200x200 ".
                "\'$filename\'"."[0] ".                  
                "-thumbnail '200x200>' -background white -gravity center -extent 200x200 ".
                "\'$dest/$afile.jpg\' 2\>/dev/null";
          system ($command);
-#         print $command."\n";
-      }         
+   #     print $command."\n";
+      }
    }
 }
 
