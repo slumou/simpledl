@@ -174,6 +174,7 @@ sub importDir
       {
          # print "Processing CSV file: $d\n";
          my ($headings, $fields) = getCSV ("$source$offset/$d");
+         $headings->[$#$headings+1] = 'spreadsheet';         
          
          # get positions of key elements
          my $legacyId_position = getPos ($headings, "legacyId");
@@ -216,6 +217,9 @@ sub importDir
          
          for ( my $i=0; $i<=$#$fields; $i++ )
          {
+            # add in spreadsheet source
+            $fields->[$i]->[$#{$fields->[$i]}+1] = "$offset/$d";
+
             my $LoD = 'item';
             if (defined $levelOfDescription_position)
             {
@@ -385,19 +389,21 @@ sub importDir
                }   
          
                # write XML
-               if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
+               if ($filename ne '')
                {
-                  print "METADATA : Generating $LoD $destination$offset/$filename/metadata.xml\n";
-                  if (! -e "$destination$offset/$filename")
+                  if ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce))
                   {
-                     print "METADATA : Creating directory $destination$offset/$filename\n";
-                     #my $x = 
-                     mkdir ("$destination$offset/$filename");
-                     #if (! $x) { print "X $x !! $! \n"; }
+                     print "METADATA : Generating $LoD $destination$offset/$filename/metadata.xml\n";
+                     if (! -e "$destination$offset/$filename")
+                     {
+                        print "METADATA : Creating directory $destination$offset/$filename\n";
+                        #my $x = 
+                        mkdir ("$destination$offset/$filename");
+                        #if (! $x) { print "X $x !! $! \n"; }
+                     }
+                     createXML ("$destination$offset/$filename/metadata.xml", "", "item", $headings, $fields->[$i]);
                   }
                   $items[$#items+1] = $filename.'@type@collection';
-                  createXML ("$destination$offset/$filename/metadata.xml", "", "item", $headings, $fields->[$i]);
-
                   # output blank index file if it is not there
                   #if (! -e "$destination$offset/$filename/index.xml")
                   #{
