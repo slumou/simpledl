@@ -9,6 +9,8 @@ use FindBin;
 $cwd = $FindBin::Bin;
 do "$cwd/../../data/config/config.pl";
 
+use MIME::Lite;
+
 # get new unique ID
 sub getID
 {
@@ -41,5 +43,5 @@ sub sendEmail
       Data     => $message
    );
 
-   my $x = $msg->send;
+   my $x = $msg->send ("smtp", $SMTPServer);
 }
