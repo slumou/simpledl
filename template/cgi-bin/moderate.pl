@@ -287,6 +287,11 @@ sub approveItem
          
          # move moderation entry
          system ("mv $moderationDir/$item $moderationDir"."-approve/");
+
+         # send the user email
+         my $url = $ENV{REQUEST_SCHEME}.'://'.$ENV{SERVER_NAME}.':'.$ENV{SERVER_PORT};
+         sendEmail ($memail, 'New account created '.$url,
+              "Please visit the site and use the login section to Reset Password before you can log into the site.\n\n$url");
       }
       elsif (($type eq 'comment') || 
              ($type eq 'commentattachment') ||
