@@ -54,12 +54,12 @@ function loadXML (URL)
 var filenames = new Array ();
 var ranked = new Array ();
 var prefix = '';
-
+var query;
 
 // main search function
 function doSearch (aprefix)
 {
-   var query;
+//   var query;
    var terms;
 //   var prefix;
    var index;
@@ -351,11 +351,11 @@ function renderMetadata (prefix, fn)
    
    if (! metadataDocument)
    {
-      itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'"><div class="searchthumbtext"><p>'+item+'</p></div></a></div>';
+      itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'?query='+query+'"><div class="searchthumbtext"><p>'+item+'</p></div></a></div>';
    }
    else
    {
-      itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'">';
+      itemfrag = '<div class="searchthumb"><a href="'+prefix+fn+'?query='+query+'">';
       var itemfragcontent = '';
       // check for levelOfDescription that indicates a composite thumbnail
       var levelOfDescription = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('levelOfDescription');

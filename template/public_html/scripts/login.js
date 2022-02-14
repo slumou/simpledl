@@ -155,6 +155,18 @@ function makeBreaks () {
       document.getElementsByTagName ("p")[i].innerHTML.replace
         (/(https?:\/\/[^ <]+)/g,"<a href=\"$1\">$1</a>");  
    }
+
+   // sneak in some updates of URLs to propagate query terms from URL into links (to enable pdf.js highlighting)
+   var fields = window.location.href.split('query=');
+   if (fields.length == 2)
+   { 
+      for ( i=0; i<document.getElementsByTagName ("a").length; i++ )
+      if (/pdfjs/.test (document.getElementsByTagName ("a")[i].getAttribute ("href")))
+      {
+         document.getElementsByTagName ("a")[i].setAttribute ("href", document.getElementsByTagName ("a")[i].getAttribute ("href")+fields[1]);
+      }
+   }
+      
 }
 
 // management script: for management interface changes
