@@ -124,6 +124,8 @@ sub generateThumbs
              ||
              (-M "$dest/$afile.jpg" > -M "$source/$afile")
              ||
+             ((-e "$dest/$afile.page") && (-M "$dest/$afile.jpg" > -M "$dest/$afile.page"))
+             ||
              ($optForce)
             )
       {
@@ -144,9 +146,18 @@ sub generateThumbs
          {
             $filename = "$renderDir/images/document.png";
          }
+         # get page number for thumbnail if it is set
+         my $pageNumber = 0;
+         if (-e "$dest/$afile.page")
+         {
+            open ( my $f, "$dest/$afile.page");
+            $pageNumber = <$f>;
+            chomp $pageNumber;
+            close ($f);
+         }
          # create thumbnail 
          my $command = "convert -define jpeg:size=200x200 ".
-               "\'$filename\'"."[0] ".                  
+               "\'$filename\'"."[$pageNumber] ".                  
                "-thumbnail '200x200>' -background white -gravity center -extent 200x200 ".
                "\'$dest/$afile.jpg\' 2\>/dev/null";
          system ($command);

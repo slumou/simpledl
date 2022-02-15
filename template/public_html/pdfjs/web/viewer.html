@@ -408,11 +408,14 @@ See https://github.com/adobe-type-tools/cmap-resources
                 fields[0] = '';
                 fields[1] = '';
              }
-
-             PDFViewerApplication.findBar.open ();
-             PDFViewerApplication.findBar.findField.value = fields[1];
-             PDFViewerApplication.findBar.highlightAll.checked = true;
-             PDFViewerApplication.findBar.dispatchEvent('');
+             
+             if (fields[1] != '')
+             {
+                PDFViewerApplication.findBar.open ();
+                PDFViewerApplication.findBar.findField.value = fields[1];
+                PDFViewerApplication.findBar.highlightAll.checked = true;
+                PDFViewerApplication.findBar.dispatchEvent('');
+             }   
           })
        });
     </script>

@@ -494,6 +494,26 @@ sub URLEscape
    return $value;
 }
 
+# create hierarchy of directories
+sub makePath
+{
+   my ($where, $path) = @_;
+
+   my @components = split ('/', $path);
+   pop (@components);
+
+   my $runningPath = $where;
+   foreach my $comp (@components)
+   {
+      $runningPath .= '/'.$comp;
+      if (! -e $runningPath)
+      { 
+         mkdir ($runningPath); 
+      }
+   }
+}
+
+
 sub createXML
 {
    my ($filename, $itemlocation, $container, $headings, $values) = @_;
@@ -644,6 +664,18 @@ sub createXML
       $digitalObjectPath_list[$i] =~ s/^\s+//;
       $digitalObjectPath_list[$i+1] =~ s/\s+$//;
       $digitalObjectPath_list[$i+1] =~ s/^\s+//;
+      
+      # create stub with page number if thumbnail must rely on non-first page
+      if ($digitalObjectPath_list[$i+1] =~ /^((.*)\/)?(.*\.pdf)\[([0-9]+)\]$/)
+      {
+         $digitalObjectPath_list[$i+1] = $1.$3;
+         my $displayPage = $4 - 1;
+         makePath ("$renderDir/thumbs", $2);
+         open ( my $f2, ">$renderDir/thumbs/$1$3.page" );
+         print $f2 $displayPage."\n";
+         close ($f2);         
+      }
+      
       print $file "   <view>\n".
                   "      <title>$digitalObjectPath_list[$i]</title>\n".
                   "      <file>".URLEscape ($digitalObjectPath_list[$i+1])."</file>\n".
