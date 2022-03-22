@@ -111,7 +111,7 @@ sub checkPassword
    my $data = join ('', @datalines);
    if ($data =~ /\<password\>(.*)\<\/password\>/)
    {
-      if ($1 eq $userpassword)
+      if ($1 eq crypt ($userpassword, $1))
       {
          return 1;
       }
@@ -310,7 +310,10 @@ sub resetPassword
       # save token
       my $passfilename = $userID.'.password.xml';
       open ( my $passfile, '>'.$userDir.'/'.$passfilename);
-      print $passfile '<password>'.$userpassword.'</password>';
+      print $passfile '<password>'.
+            crypt ($userpassword, join ("", (".", "/", 0..9, "A".."Z", "a".."z")[rand 64, rand 64])).
+#            $userpassword.
+            '</password>';
       close ($passfile);
       
       # go back to login page
