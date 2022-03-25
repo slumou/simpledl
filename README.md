@@ -35,7 +35,7 @@ These instructions are to install Simple DL on a standard Ubuntu Linux variant, 
 1. Create a new Linux user account.  In this example the account is called *docs*.
 
 ```
-sudo adduser docsjournalctl -xe
+sudo adduser docs
 ```
 
 2. Log in as the docs users.  In the user's home directory, create a directory named *simpledl* and change into this directory.
