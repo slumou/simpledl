@@ -75,10 +75,11 @@ file:///home/docs/public_html/index.html
 127.0.0.1       localhost docs.simpledl.net
 ```
 
-2. Install the Apache HTTPD Web server and suexec-custom set up so suexec works in home directories.  Suexec is a secure wrapper that Apache uses to execute applications as the user that owns the script, and suexec-custom is a variation that allows you configure suexec without recompiling the Web server.
+2. Install the Apache HTTPD Web server and suexec-custom set up so suexec works in home directories.  Suexec is a secure wrapper that Apache uses to execute applications as the user that owns the script, and suexec-custom is a variation that allows you configure suexec without recompiling the Web server.  The modules listed are needed for executing scripts (cgi), using user home directories (userdir) and secure scripts (suexec).
 
 ```
 sudo apt install apache2 apache2-suexec-custom
+sudo a2enmod cgi suexec userdir
 ```
 
 Configure suexec-custom by specifying the root for scripts for the server.  You can use */home* to keep all files in the home directory if this is not a widely-used production server.  If it is, it may be better to use */var/www* and then those selected users who are allowed to use Web applications can have directories within this.
