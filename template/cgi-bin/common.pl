@@ -45,3 +45,26 @@ sub sendEmail
 
    my $x = $msg->send ("smtp", $SMTPServer);
 }
+
+# send admins email
+sub sendAdminEmail 
+{
+   my ($subject, $message) = @_;
+
+   foreach my $adminID (@administrators)
+   {
+      if (-e $userDir.'/'.$adminID.".email.xml")
+      {
+         my $email = '';
+         open (my $efile, $userDir.'/'.$adminID.".email.xml");
+         $email = <$efile>;
+         chomp $email;
+         close ($efile);
+       
+         if ($email =~ /\<email\>(.*)\<\/email\>/)
+         {
+            sendEmail ($1, $subject, $message);
+         }
+      }
+   }
+}

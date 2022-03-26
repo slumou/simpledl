@@ -74,6 +74,9 @@ if ($motivation ne '')
    print "<h1>New User Application</h1>\n".
          "<p>Thank you for your request.  A moderator will consider this as soon as possible and you will hear back from us.</p>\n".
          "</body></html>";
+
+   sendAdminEmail ("New user application - $email", 
+     "User - $user\nEmail - email\nMotivation - $motivation\n\nLog into the site to approve/deny this request\n");
 }
 
 # comment only - no attachment
@@ -92,6 +95,9 @@ elsif (($gotComment == 1) && ($gotAttachment == 0))
    close ($cfile);
    
    thanks ();
+
+   sendAdminEmail ("New comment - $user", 
+     "User - $user\nItem - $item\nComment - $comment\n\nLog into the site to approve/deny this request\n");
 }
 
 # comment plus attachment
@@ -119,6 +125,9 @@ elsif (($gotComment == 1) && ($gotAttachment == 1))
    close ($outfile);
    
    thanks ();
+
+   sendAdminEmail ("New comment and file - $user", 
+     "User - $user\nItem - $item\nComment - $comment\n\nLog into the site to approve/deny this request\n");
 }
 
 # uploaded file
@@ -144,6 +153,9 @@ elsif (($gotComment == 0) && ($gotAttachment == 1))
    close ($outfile);
    
    thanks ();
+
+   sendAdminEmail ("New file - $user", 
+     "User - $user\nFilename - $cafilename\n\nLog into the site to approve/deny this request\n");
 }
 
 # print out an error message // redirect to reload page
