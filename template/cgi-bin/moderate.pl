@@ -252,6 +252,10 @@ sub approveItem
 
       my $type = getValues ($doc, "type");
 
+      my $maxcommentlen = 6;
+      my $maxcommentID = join ('', map { '9' } 1..$maxcommentlen);
+      my $maxcommentglob = join ('', map { '?' } 1..$maxcommentlen);
+
       if ($type eq 'user')
       {
          my $userID = getID ('users');
@@ -352,7 +356,7 @@ sub approveItem
                          "</event>\n".
                          $related.
                          "<view>\n".
-                         "<title>$catitle</title>\n".
+                         "<title>$cafilename</title>\n".
                          "<file>$uploadObjectLocation/$attachmentID/$cafilename</file>\n".
                          "</view>\n".
                          "</item>\n";
@@ -383,14 +387,27 @@ sub approveItem
             system ("$binDir/generate.pl --thumbs >/dev/null 2>&1");
             #system ("$binDir/generate.pl \"metadata/$uploadMetadataLocation/index\" >/dev/null 2>&1");
             #system ("$binDir/generate.pl \"metadata/$uploadMetadataLocation/$attachmentID/index\" >/dev/null 2>&1");
+
+            # get user comment ID for new comment and reserve spot
+            my $userCommentID = $maxcommentID;
+            while (-e $userDir."/$muserID.$userCommentID.xml")
+            { $userCommentID--; }
+         
+            # add entry for user
+            open ( my $cfile, '>'.$userDir."/$muserID.$userCommentID.xml" );
+            print $cfile '<upload>'.
+                         "<item>$uploadMetadataLocation/$uploadLocation</item>".
+                         '</upload>';
+            close ($cfile);
+
+            # regenerate user page
+            system ("$binDir/import.pl --users >/dev/null 2>&1");
+            system ("$binDir/generate.pl --page \"users/$muserID\" >/dev/null 2>&1");
          }
 
          if (($type eq 'comment') || ($type eq 'commentattachment'))
          {
             # get ID for new comment and reserve spot
-            my $maxcommentlen = 6;
-            my $maxcommentID = join ('', map { '9' } 1..$maxcommentlen);
-            my $maxcommentglob = join ('', map { '?' } 1..$maxcommentlen);
             my $commentID = $maxcommentID;
             while (-e $commentDir."/$mlocation/$commentID.xml")
             { $commentID--; }
@@ -416,6 +433,23 @@ sub approveItem
 
             # regenerate page
             system ("$binDir/generate.pl --page \"metadata/$mlocation/index\" >/dev/null 2>&1");
+            
+            # get user comment ID for new comment and reserve spot
+            my $userCommentID = $maxcommentID;
+            while (-e $userDir."/$muserID.$userCommentID.xml")
+            { $userCommentID--; }
+         
+            # add entry for user
+            open ( my $cfile, '>'.$userDir."/$muserID.$userCommentID.xml" );
+            print $cfile '<comment>'.
+                         '<item>'.$mlocation.'</item>'.
+                         "<file>$mlocation/$commentID</file>".
+                         '</comment>';
+            close ($cfile);
+
+            # regenerate user page
+            system ("$binDir/import.pl --users >/dev/null 2>&1");
+            system ("$binDir/generate.pl --page \"users/$muserID\" >/dev/null 2>&1");
          }
 
          # move moderation entry
