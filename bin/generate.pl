@@ -310,6 +310,14 @@ sub transform
 #           " --stringparam \'commentRenderDir\' \'$commentRenderDir\' ".           
 #           " $stylesheet \'$source\' > \'$destination\'");
 
+   # first check if there is a special python program for pre-transformation
+print "$source.py";
+   if (-e "$source.py")
+   {
+      print ("Running python pre-generation\n");
+      system ("python3 $source.py > $source");
+   }
+
    # library call
    my $source = XML::LibXML->load_xml ( location => $source );
    my $results = $styleObj->transform ($source, 
