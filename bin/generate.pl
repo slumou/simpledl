@@ -311,7 +311,7 @@ sub transform
 #           " $stylesheet \'$source\' > \'$destination\'");
 
    # first check if there is a special python program for pre-transformation
-print "$source.py";
+#print "$source.py";
    if (-e "$source.py")
    {
       print ("Running python pre-generation\n");
