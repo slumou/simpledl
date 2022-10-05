@@ -386,6 +386,7 @@ sub create_fulltexts
                   if ($viewfile->hasChildNodes)
                   {
                      my $fulltextfilename = $viewfile->getFirstChild->toString;
+                     $fulltextfilename =~ s/\%20/ /g;
                      if (($fulltextfilename =~ /\.[pP][dD][fF]$/) && 
                          (-e "$directory/collection/$fulltextfilename"))
                      {
