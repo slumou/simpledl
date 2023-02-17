@@ -555,7 +555,10 @@ sub createXML
             foreach my $value_bit (split ($separator, $value))
             {
                my $attributes = '';
-               my @valueattrbit = split ('@', $value_bit);
+               # changed simple split to one that ignores escaped characters and then removes escapes characters
+               # after split, \@ becomes @ and \\ becomes \ 
+               # [hussein 17 feb 2023]
+               my @valueattrbit = (map { s/\\([\\@])/$1/g; $_; } ($value_bit =~ /(?:^|\@) ((?:\\[\\@] | [^\@])*)/gx));
                $value_bit = $valueattrbit[0];
                for ( my $j=1; $j<=$#valueattrbit; $j+=2 )
                {
