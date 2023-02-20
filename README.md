@@ -145,7 +145,9 @@ sudo apt install imagemagick git unzip poppler-utils
 sudo apt install libxml-libxslt-perl libxml-dom-perl libxml-dom-xpath-perl libtext-csv-perl libcgi-pm-perl libmime-lite-perl
 ```
 
-2. Edit data/users/1.email.xml to contain your Google account email.  This is a bootstrapping process for the admin account, and is mostly needed if you intend to use the Web interface but may also appear on some pages.
+Edit /etc/ImageMagick-6/policy.xml and change the rights for the PDF pattern to "read|write" (or it will not generate thumbnails for PDFs).
+
+2. Edit data/users/1.email.xml to contain your email address.  This is a bootstrapping process for the admin account, and is mostly needed if you intend to use the Web interface but may also appear on some pages.
 
 3. Edit the metadata in *data/spreadsheets* and collections in *public_html/collection* to change/add/delete collections and items.
 
