@@ -335,11 +335,16 @@ sub importDir
                         @views = (@views, $title, $fields->[$j]->[$digitalObjectPath_position]); 
                      }
                   }
-                  # strip prefixes from view locations
+                  # strip prefixes from view locations and check for missing files
                   for ( my $k=0; $k<=$#views; $k+=2 )
                   {
                      $views[$k+1] =~ s/\/uploads\/fhya\/(.*)/$1/;
                      $views[$k+1] =~ s/\/uploads\/(.*)/$1/;
+                     # check that the file exists
+                     if (! -e "$renderDir/collection/$views[$k+1]")
+                     {
+                        print "MISSING FILE: $renderDir/collection/$views[$k+1]\n";
+                     }
                   }
                   $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, @views);
                }

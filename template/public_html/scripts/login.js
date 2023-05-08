@@ -104,7 +104,7 @@ function doLogin ()
    if (document.getElementById("addcommentformuserID"))
       document.getElementById("addcommentformuserID").value = userID;
    if (document.getElementById("submitsection"))
-      document.getElementById("submitsection").style.display = "block";
+      document.getElementById("submitsection").style.display = "flex";
 //   if (administrator == "1")
 //   {
 //      if (document.getElementById("managesection"))  
