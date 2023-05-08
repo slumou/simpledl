@@ -335,11 +335,16 @@ sub importDir
                         @views = (@views, $title, $fields->[$j]->[$digitalObjectPath_position]); 
                      }
                   }
-                  # strip prefixes from view locations
+                  # strip prefixes from view locations and check for missing files
                   for ( my $k=0; $k<=$#views; $k+=2 )
                   {
                      $views[$k+1] =~ s/\/uploads\/fhya\/(.*)/$1/;
                      $views[$k+1] =~ s/\/uploads\/(.*)/$1/;
+                     # check that the file exists
+                     if (! -e "$renderDir/collection/$views[$k+1]")
+                     {
+                        print "MISSING FILE: $renderDir/collection/$views[$k+1]\n";
+                     }
                   }
                   $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, @views);
                }
@@ -555,7 +560,10 @@ sub createXML
             foreach my $value_bit (split ($separator, $value))
             {
                my $attributes = '';
-               my @valueattrbit = split ('@', $value_bit);
+               # changed simple split to one that ignores escaped characters and then removes escapes characters
+               # after split, \@ becomes @ and \\ becomes \ 
+               # [hussein 17 feb 2023]
+               my @valueattrbit = (map { s/\\([\\@])/$1/g; $_; } ($value_bit =~ /(?:^|\@) ((?:\\[\\@] | [^\@])*)/gx));
                $value_bit = $valueattrbit[0];
                for ( my $j=1; $j<=$#valueattrbit; $j+=2 )
                {
