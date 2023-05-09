@@ -380,10 +380,21 @@ function renderMetadata (prefix, fn)
          }
       }      
       // add in title if it exists
+      var titlesnippet = '';
       var titles = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('title');
       if (titles.length > 0)
       {
-         itemfragcontent = itemfragcontent + '<div class="searchthumbtext"><p>'+titles.item(0).firstChild.data+'</p></div>';
+         titlesnippet = titles.item(0).firstChild.data;
+      }   
+      // add in identifier if it exists
+      var identifiers = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('identifier');
+      if (identifiers.length > 0)
+      {
+         titlesnippet = titlesnippet + ' ('+identifiers.item(0).firstChild.data+')';
+      }
+      if (titlesnippet != '')
+      {  
+         itemfragcontent = itemfragcontent + '<div class="searchthumbtext"><p>'+titlesnippet+'</p></div>';
       }
       if (itemfragcontent == '')
       { itemfragcontent = '<div class="searchthumbtext"><p>'+item+'</p></div>'; }
