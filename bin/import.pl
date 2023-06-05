@@ -174,7 +174,8 @@ sub importDir
       {
          # print "Processing CSV file: $d\n";
          my ($headings, $fields) = getCSV ("$source$offset/$d");
-         $headings->[$#$headings+1] = 'spreadsheet';         
+         $headings->[$#$headings+1] = 'spreadsheet';
+         $headings->[$#$headings+1] = 'slug';
          
          # get positions of key elements
          my $legacyId_position = getPos ($headings, "legacyId");
@@ -299,6 +300,8 @@ sub importDir
                   my $slug = makeSlug ($fields->[$i]->[$title_position]);
                   $dirBySlug{$slug} = $filename;
                   $levelBySlug{$slug} = $effectiveLevel;
+                  # add slug into metadata explicitly
+                  $fields->[$i]->[$#{$fields->[$i]}+1] = $slug;
                }
                if ((defined $legacyId_position) &&
                    ($fields->[$i]->[$legacyId_position] ne ''))
