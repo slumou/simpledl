@@ -265,8 +265,8 @@ sub importDir
                    ($fields->[$i]->[$qubitParentSlug_position] ne '') &&
                    (exists $dirBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])}))
                {
-                  $parent = $dirBySlug{trim ($fields->[$i]->[$qubitParentSlug_position])};
-                  $effectiveLevel = $levelBySlug{trim ($fields->[$i]->[$qubitParentSlug_position])} + 1;
+                  $parent = $dirBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])};
+                  $effectiveLevel = $levelBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])} + 1;
                }
                elsif ((defined $parentId_position) &&
                       ($fields->[$i]->[$parentId_position] ne '') &&
