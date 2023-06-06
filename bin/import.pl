@@ -110,6 +110,14 @@ sub makeSlug
    return $s;
 }
 
+# trim leading and trailing whitespace
+sub trimws
+{
+   my ($s) = @_;
+   $s =~ s/^\s+|\s+$//g;
+   return $s;
+}
+
 # get a single table value
 sub getVal
 {
@@ -255,10 +263,10 @@ sub importDir
                my $parent = undef;
                if ((defined $qubitParentSlug_position) &&
                    ($fields->[$i]->[$qubitParentSlug_position] ne '') &&
-                   (exists $dirBySlug{$fields->[$i]->[$qubitParentSlug_position]}))
+                   (exists $dirBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])}))
                {
-                  $parent = $dirBySlug{$fields->[$i]->[$qubitParentSlug_position]};
-                  $effectiveLevel = $levelBySlug{$fields->[$i]->[$qubitParentSlug_position]} + 1;
+                  $parent = $dirBySlug{trim ($fields->[$i]->[$qubitParentSlug_position])};
+                  $effectiveLevel = $levelBySlug{trim ($fields->[$i]->[$qubitParentSlug_position])} + 1;
                }
                elsif ((defined $parentId_position) &&
                       ($fields->[$i]->[$parentId_position] ne '') &&
