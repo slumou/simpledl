@@ -562,7 +562,7 @@ sub main
          ($fileid) = index_dir ($ifmap, $primary, ".", \@other, $if, $ifb, $sort, $fmap, $titlemap, $fileid, $titlematch, $indexers->{$toplevel}->{'file_exclude'}, $browselocations);
          print "\n";
          output_search_if ($toplevel, $id, $if, $fmap, $titlemap);
-#         output_browse_if ($toplevel, $id, $ifb, $fmap, $titlemap);
+         output_browse_if ($toplevel, $id, $ifb, $fmap, $titlemap);
          output_fulllist ($toplevel, $id, $fmap, $titlemap, $fileid);
          output_sort_if ($toplevel, $sort, $fmap, $titlemap, $fileid);
       }
