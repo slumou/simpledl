@@ -120,6 +120,7 @@ function doLogout ()
    userID = '';
    document.cookie = "username="+''+"; path=/";
    document.cookie = "userID="+''+"; path=/";
+   document.cookie = "verify="+''+"; path=/";
    window.location.reload (false);
 }
 

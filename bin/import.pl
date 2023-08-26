@@ -539,6 +539,10 @@ sub createXML
    
    my ($eventActors, $eventTypes, $eventDates, $eventDescriptions, $digitalObjectPath, $creators, $cdate) = ('', '', '', '', '', '', '');
    my $title = '';
+   
+   my $entityFieldX = 'creator';
+   if ((defined $entityField) && ($entityField ne ''))
+   { $entityFieldX = $entityField; }
     
    for ( my $i=0; $i<=$#$headings; $i++ )
    {
@@ -559,7 +563,7 @@ sub createXML
       { $eventDescriptions = $values->[$i]; }
       elsif ($heading eq 'digitalObjectPath')
       { $digitalObjectPath = $values->[$i]; }
-      elsif ($heading eq 'creator')
+      elsif ($heading eq $entityFieldX)
       { $creators = $values->[$i]; }
 
       # otherwise simply output fields
@@ -662,7 +666,7 @@ sub createXML
       }
    }
    
-   # process creators as entities and add IDs to each
+   # process creators (aka entityFieldX) as entities and add IDs to each
    my @creators_list = split ('\|', XMLEscape ($creators));
    for ( my $i = 0; $i <= $#creators_list; $i++ )
    {
@@ -672,7 +676,7 @@ sub createXML
          $actorId = addEntityItemRole ($creators_list[$i], $itemlocation, $title, 'author', $cdate);
          $actorId = " id=\"internal$actorId\""; 
       }
-      print $file "   <creator$actorId>$creators_list[$i]</creator>\n";
+      print $file "   <$entityFieldX$actorId>$creators_list[$i]</$entityFieldX>\n";
    }
 
 #print "***".$digitalObjectPath."\n";
