@@ -50,6 +50,18 @@ function loadXML (URL)
 }
 
 
+// check a list of strings for a matching regular expression
+function regListSearch ( nextwords, termre )
+{
+   var found = 0;
+   for ( var i=0; i<nextwords.length; i++ )
+   {
+      if (termre.test (nextwords[i]))
+      { return true; }
+   }
+   return false;
+}
+
 // persistent result storage for paging
 var filenames = new Array ();
 var ranked = new Array ();
@@ -59,13 +71,8 @@ var query;
 // main search function
 function doSearch (aprefix)
 {
-//   var query;
    var terms;
-//   var prefix;
    var index;
-   var accum;
-//   var filenames;
-   var filetitles;
 
    // prefix for http requests
    if (toplevel == 'main')
@@ -76,79 +83,251 @@ function doSearch (aprefix)
    // split query into terms and split out spaces
    query = document.forms["searchform"].elements["searchbox"].value;
    query = query.toLowerCase ();
-   query = query.replace (/['"_\.]/g, " ");
+   query = query.replace (/['_\.]/g, " ");
    query = query.replace (/^ +/, "");
    query = query.replace (/ +$/, "");
-//   query = query.replace (/%20/, " ");
+   // query = query.replace (/%20/, " ");
    
    // which index to use
    var use_index = document.forms["searchform"].elements["index"].value;
    if (! use_index)
       use_index = 1; 
 
-   // turn extended unicode characters into simple numbers
-   var i;
-   var j = query.length;
-   var newquery = '';
-   for ( i=j-1; i>=0; i-- )
+// debug use index 3!
+//   use_index = 3;
+
+   // create arrays
+   var accum = new Array ();
+   filenames = new Array ();
+   var filetitles = new Array ();
+   var phrases = new Array ();
+   var requiredaccum = new Array ();
+   var requiredaccumtemp = new Array ();
+   var requiredTerms = 0;
+
+   // first split into phrases
+   var m;
+   var re = /\+?\"[^\"]+\"|\+?[^\s\"]+/g;
+   while (m = re.exec (query))
    {
-      var achar = query.charAt (i);
-      if (achar.match(/[a-zA-Z0-9\: ]/))
+      var phrase = m[0];
+      phrase = phrase.replace (/(\+?)\"([^\"]+)\"/, "$1$2");
+      phrases.push (phrase);
+   }
+
+   // iterate over all phrases
+   for ( var k=0; k<phrases.length; k++ )
+   {
+      // console.log (phrases[k]);   
+      
+      // check for required indicator
+      var required = 0;
+      if (phrases[k].charAt(0) == "+")      
       {
-         newquery = achar+newquery;
+         required = 1;
+      }
+      phrases[k] = phrases[k].replaceAll ("+", ""); // remove +s
+      
+      // create accum array for this phrase
+      var paccum = new Array ();
+   
+      // read term frequency files for each term in each phrase
+      var terms = phrases[k].split (/ +/);   
+      for ( var i=terms.length-1; i>=0; i-- )
+      {
+         // info to track for trimming accums due to phrase searching
+         var nextword = '';
+         if (i+1 < terms.length)
+         { nextword = terms[i+1]; }         
+         var phraseaccum = new Array();
+         
+         // separate field from value
+         var use_field = 'all';
+         if (terms[i].match (/\:/))
+         {
+            var parts = terms[i].split (/\:/);
+            if ((parts.length < 2) || (parts[0] == '') || (parts[1] == ''))
+               continue;
+            use_field = parts[0];
+            terms[i] = parts[1];
+         }
+         
+         // wildcards check
+         var wildcards = 0;
+         if ((terms[i].indexOf ("?") > -1) || (terms[i].indexOf ("*") > -1))
+         { wildcards = 1; }
+         var wildcardsnext = 0;
+         if ((nextword.indexOf ("?") > -1) || (nextword.indexOf ("*") > -1))
+         { wildcardsnext = 1; }         
+         
+         // process with full indexmap if there are wildcards
+         var indexmap;
+         var termre;
+         if (wildcards == 1)
+         {
+            var termrestring = terms[i].replaceAll ("*", ".*");
+            termrestring = termrestring.replaceAll ("?", ".");
+            termre = new RegExp ("^"+termrestring+"$");
+            indexmap = loadXML ("indices/"+toplevel+"/search/"+use_index+"/"+use_field+"/indexmap.xml");
+            if (indexmap == null)
+               continue;            
+         }
+         else // load in fast index map
+         {
+            indexmap = loadXML ("indices/"+toplevel+"/search/"+use_index+"/"+use_field+"/indexmapfast.xml");
+            if (indexmap == null)
+               continue;
+         }
+            
+         // find the index within the indexmap
+         var indexmapfilelist = indexmap.getElementsByTagName ('file');
+         for (var l=0; l<indexmapfilelist.length; l++ )
+         {
+            var fileid = indexmapfilelist.item(l).getAttribute ('id');
+            var allterms = indexmapfilelist.item(l).firstChild.data.split (/ +/);
+            
+            // if there are wildcards, find files that match
+            if (wildcards == 1)
+            {
+               var found = 0;
+               for ( var p=0; p<allterms.length; p++ )
+               {
+                  if (termre.test (allterms[p]))
+                  { 
+                     found = 1; 
+                     break;
+                  }
+               }
+               if (found == 0)
+               { continue; } 
+            }
+            else // check if term appears within bounds of file
+            {
+               if (! ((terms[i].localeCompare (allterms[0]) >= 0) && (terms[i].localeCompare (allterms[allterms.length-1]) <= 0)))
+               { continue; }
+            }   
+            
+//console.log ('term '+terms[i]+' phrases '+phrases[k]);
+            
+            indexfile = loadXML ("indices/"+toplevel+"/search/"+use_index+"/"+use_field+"/index"+fileid+".xml");
+            if (indexfile == null)
+               continue;
+            
+            var index = indexfile.getElementsByTagName ('index');
+            for ( var m=0; m<index.length; m++ )
+            {
+               // if the term is a match
+               if (((wildcards == 0) && (index.item(m).getAttribute ("term") == terms[i])) ||
+                   ((wildcards == 1) && (termre.test (index.item(m).getAttribute ("term")))))
+               {
+                  var wordlist = index.item(m).getElementsByTagName ('tf');
+                  var df = wordlist.length;
+                  for ( var j=0; j<wordlist.length; j++ )
+                  {
+                     var value = wordlist.item(j).firstChild.data;
+                     var fileid = wordlist.item(j).getAttribute ('id');
+                     var next = wordlist.item(j).getAttribute ('next');
+                     if (terms.length > 1) // phrase search
+                     {
+                        if (i==(terms.length-1)) // the last term
+                        {
+                           if (isNaN (paccum[fileid]))
+                              paccum[fileid] = 0;
+                           paccum[fileid] += parseFloat(value) / df;
+                           phraseaccum[fileid] = 0;
+                        }
+                        else // not the last term, so add weights but only for existing files
+                        {
+                           var nextwords = next.split (' ');
+                           if (((wildcardsnext==0) && (nextwords.indexOf (nextword) > -1)) ||
+                               ((wildcardsnext==1) && (regListSearch (nextwords, termre))))
+                           {
+                              if (! (isNaN (paccum[fileid])))
+                              {
+                                 paccum[fileid] += parseFloat(value) / df;
+                                 phraseaccum[fileid] = 0;
+                              }   
+                           }
+                        }   
+                     }
+                     else // non-phrase searches
+                     {
+                        if (isNaN (paccum[fileid]))
+                           paccum[fileid] = 0;
+                        paccum[fileid] += parseFloat(value) / df;
+                     }   
+                  }
+               }
+            }      
+         }
+         
+         // remove accums for non-matches
+         if (terms.length > 1)
+         {
+            for ( var n=0; n<paccum.length; n++ )
+            {
+               if ((! isNaN (paccum[n])) && (isNaN (phraseaccum[n])))
+               {
+                  paccum[n] = NaN; 
+               }
+            }
+         }
+      }
+      
+      // merge phrase accumulator into main accumulator or required accumulator
+      if (required == 1)
+      {
+         if (requiredTerms == 0)
+         { // move phrase accumulator into required accumulator
+            requiredaccum = paccum;
+         }
+         else
+         { // merge new required list into required accumulator
+            for ( var i=0; i<requiredaccum.length; i++ )
+            {
+               if (! isNaN (requiredaccum[i]))
+               {
+                  if (! isNaN (paccum[i]))
+                  { 
+                     requiredaccum[i] += paccum[i]; 
+                  }
+                  else
+                  {
+                     requiredaccum[i] = NaN;
+                  }
+               }
+            }
+         }
+         requiredTerms++;
       }
       else
-      {
-         newquery = '_'+query.charCodeAt (i)+'_'+newquery;
+      { // merge phrase accumulator into main accumulator
+         for ( var i=0; i<paccum.length; i++ )
+         {
+            if (! isNaN (paccum[i]))
+            {
+               if (isNaN (accum[i]))
+               { accum[i] = 0; }
+               accum[i] += paccum[i];
+            }   
+         }
       }
-   }
+   }   
    
-   // create array
-   accum = new Array();
-//   filenames = new Array();
-   filenames = new Array ();
-   filetitles = new Array();
-
-   // make sure we do not split an empty query   
-   if (newquery == '')
-      terms = new Array;
-   else
-      terms = newquery.split (/ +/);
-   
-   // read term frequency files
-   for ( var i=0; i<terms.length; i++ )
+   // merge required list and regular list
+   if (requiredTerms > 0)
    {
-      var use_field = 'all';
-      
-      if (terms[i].match (/\:/))
+      for ( var i=0; i<requiredaccum.length; i++ )
       {
-         var parts = terms[i].split (/\:/);
-         if ((parts.length < 2) || (parts[0] == '') || (parts[1] == ''))
-            continue;
-         use_field = parts[0];
-         terms[i] = parts[1];
+         if ((! isNaN (requiredaccum[i])) && (! isNaN (accum[i])))
+         {
+            requiredaccum[i] += accum[i];
+         }
       }
-   
-      index = loadXML ("indices/"+toplevel+"/search/"+use_index+"/"+use_field+"/_"+terms[i]+".xml");
-      if (index == null)
-         continue;
-
-      var wordlist = index.getElementsByTagName ('tf');
-      var df = wordlist.length;
-      for ( var j=0; j<wordlist.length; j++ )
-      {
-         var value = wordlist.item(j).firstChild.data;
-         var fileid = wordlist.item(j).getAttribute ('id');
-         filenames[fileid] = wordlist.item(j).getAttribute ('file');
-         filetitles[fileid] = wordlist.item(j).getAttribute ('title');
-         if (isNaN (accum[fileid]))
-            accum[fileid] = 0;
-         accum[fileid] += parseFloat(value) / df;
-      }
+      accum=requiredaccum;
    }
 
    // selection sort based on weights, ignoring zero values
-//   var ranked = new Array();
    ranked = new Array ();
    var weight = new Array();
    var k = 0;
@@ -178,9 +357,7 @@ function doSearch (aprefix)
       }
    }
 
-   // check for empty query and add full list of items
-   if (query == '')
-   {
+   // check for empty query and add full list of items, using existing ranked/accum if necessary
       index = loadXML ("indices/"+toplevel+"/fulllist/index.xml");
       if (index)
       {
@@ -191,11 +368,13 @@ function doSearch (aprefix)
             var fileid = wordlist.item(j).getAttribute ('id');
             filenames[fileid] = wordlist.item(j).getAttribute ('file');
             filetitles[fileid] = wordlist.item(j).getAttribute ('title');
-            ranked[j]=j;
-            accum[fileid] = 1;
+            if (query == '')
+            {
+               ranked[j]=j;
+               accum[fileid] = 1;
+            }
          }         
       }
-   }
 
    // do browse and sort processing
    var config = loadXML ("config/config.xml");

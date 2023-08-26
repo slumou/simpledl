@@ -19,7 +19,7 @@ do "$FindBin::Bin/../../data/config/config.pl";
 do "$FindBin::Bin/stopwords.pl";
 
 my $indexLocation = "$renderDir/indices";
-
+my $indexLimit = 250000;
 
 sub index_dir
 {
@@ -36,6 +36,7 @@ sub index_dir
          }
          elsif (($afile =~ /^[^\.]+\.xml$/) && (! defined $fileexclude->{$afile}) && (! defined $fileexclude->{$filepath.'/'.$afile}))
          {
+            print (".");
             ($fileid) = index_file ($ifmap, $primary, substr ($filepath.'/'.$afile, 2), $other, $if, $ifb, $sort, $fmap, $titlemap, $fileid, $titlematch, $fileexclude, $browselocations);
          }
       }
@@ -68,12 +69,21 @@ sub index_file
          $data .= join ('', @lines);
       }
    }
+   my $rawdata = $data;
+   $rawdata =~ s/\<[^\>]*\>/ /go;
    
    # add in filename and path info
    if ($filename =~ /^(.*)\/([^\/]+\.xml)$/)
    {
       my @paths = split ('/', $1);
       my @fullpaths = map { '<subpath>'.join ('/', @paths[0..$_]).'</subpath>' } (0..$#paths);
+
+# debug information
+#      foreach my $fullpath (@fullpaths)
+#      {
+#         print "*** $fullpath\n";
+#      }
+
       $data .= "<filename><path>$1</path><file>$2</file>".join ("", @fullpaths)."</filename>";
    }
    elsif ($filename =~ /^([^\/]+\.xml)$/)
@@ -111,23 +121,30 @@ sub index_file
 #      else
 #      {
 #         print "indexing ... $field ... $ifmap->{$field}\n";
-         foreach my $node ($doc->findnodes ($location))
+         if ($location eq '*//text()')
          {
-            if ($node->hasChildNodes) # to cater for matched elements
+            $data = $rawdata;
+         }
+         else 
+         {
+            foreach my $node ($doc->findnodes ($location))
             {
-               my $d = $node->getChildNodes->item(0)->toString; 
-               $data .= ' '.$d;
-               # eliminate leading spaces
-               $d =~ s/^\s+//;
-               foreach my $bfield (keys %{$browselocations->{$field}})
+               if ($node->hasChildNodes) # to cater for matched elements
                {
-                  index_browse_data ($bfield, $d, $ifb, $fileid);
+                  my $d = $node->getChildNodes->item(0)->toString; 
+                  $data .= ' '.$d;
+                  # eliminate leading spaces
+                  $d =~ s/^\s+//;
+                  foreach my $bfield (keys %{$browselocations->{$field}})
+                  {
+                     index_browse_data ($bfield, $d, $ifb, $fileid);
+                  }
                }
-            }
-            else # to cater for plain *//text() nodes
-            {
-               $data .= ' '.$node->toString;
-            }
+               else # to cater for plain *//text() nodes
+               {
+                  $data .= ' '.$node->toString;
+               }
+            }   
          }
 #      }
 #      print "$field $data $ifmap->{$field} \n";
@@ -170,8 +187,14 @@ sub index_search_data
    $data = lc($data);
    
    my @words = split (' ', $data);
-   foreach my $aword (@words)
+
+   for ( my $i=0; $i<$#words; $i++ )
    {
+      my $aword = $words[$i];
+      my $nextword = '';
+      if (($i+1) < ($#words))
+      { $nextword = $words[$i+1]; }
+      
       if (! exists $stopwords{$aword})
       {
          if (! exists $if->{$field}->{$aword})
@@ -181,8 +204,14 @@ sub index_search_data
          if (! exists $if->{$field}->{$aword}->{$fileid})
          {
             $if->{$field}->{$aword}->{$fileid} = 0;
+            $if->{$field}->{$aword}->{$fileid.'next'} = {};
          }
+         # add weight into index
          $if->{$field}->{$aword}->{$fileid} += $weight/($#words+1);
+         
+         # add next word into index
+         if ($nextword ne '')
+         { $if->{$field}->{$aword}->{$fileid.'next'}->{$nextword} = 1; }
       }
    }
 }
@@ -226,26 +255,85 @@ sub output_search_if
    foreach my $field (keys %$if)
    {
       mkdir ("$indexLocation/$toplevel/search/$id/$field");
-      foreach my $aword (keys %{$if->{$field}})
+      my $obuffer = '';
+      my $fragmentNumber = 1;
+      my $mapbuffer = "<file id=\"".$fragmentNumber."\">";
+      my $fmapbuffer = "<file id=\"".$fragmentNumber."\">";
+      my $firstInMap = 1;
+      my $firstWord = '';
+      my $lastWord = '';
+      foreach my $aword (sort (keys %{$if->{$field}}))
       {
          my $bword = $aword;
-         $bword =~ s/([^a-zA-Z0-9])/'_'.ord ($1).'_'/goe;
+#         $bword =~ s/([^a-zA-Z0-9])/'_'.ord ($1).'_'/goe;
    
-         open (my $ifile, ">:utf8", "$indexLocation/$toplevel/search/$id/$field/_$bword.xml");
-         print $ifile "<index>\n";
+         $obuffer .= "<index term=\"$aword\">\n";
          foreach my $fileid (keys %{$if->{$field}->{$aword}})
          {
+            # skip over next fields
+            if ($fileid =~ /next$/) { next; } 
+         
             my $rounded = sprintf ("%.3f", $if->{$field}->{$aword}->{$fileid});
             if ($rounded eq '0.000')
             { $rounded = '0.001'; }
-            my $filename = $fmap->{$fileid};
-            my $title = $titlemap->{$fileid};
-            print $ifile "<tf id=\"$fileid\" file=\"$filename\" title=\"$title\">$rounded</tf>\n";
+#            my $filename = $fmap->{$fileid};
+#            my $title = $titlemap->{$fileid};
+
+            my $nextwords = join (' ', keys %{$if->{$field}->{$aword}->{$fileid.'next'}});
+
+            $obuffer .= "<tf id=\"$fileid\" next=\"$nextwords\">$rounded</tf>\n";
+#            print $ifile "<tf id=\"$fileid\" file=\"$filename\" title=\"$title\">$rounded</tf>\n";
          }
-         print $ifile "</index>\n";
+         $obuffer .= "</index>\n";
+         if ($firstInMap == 1)
+         {
+            $firstInMap = 0;
+         }
+         else
+         {
+            $mapbuffer .= ' ';
+         }   
+         $mapbuffer .= "$aword";
+         if ($firstWord eq '')
+         { $firstWord = $aword; }
+         $lastWord = $aword;
+         if (length ($obuffer) > $indexLimit)
+         {
+         print "Writing index: $indexLocation/$toplevel/search/$id/$field/index$fragmentNumber.xml\n";
+            open (my $ifile, ">:utf8", "$indexLocation/$toplevel/search/$id/$field/index$fragmentNumber.xml");
+            print $ifile "<indexFile>\n";
+            print $ifile $obuffer;
+            print $ifile "</indexFile>\n";
+            close ($ifile);
+            $fragmentNumber++;
+            $obuffer = '';
+            $mapbuffer .= "</file>\n<file id=\"".$fragmentNumber."\">";
+            $fmapbuffer .= "$firstWord $lastWord</file>\n<file id=\"".$fragmentNumber."\">";
+            $firstWord = '';
+            $lastWord = '';
+            $firstInMap = 1;
+         }
+      }
+      if ($obuffer ne '')
+      {
+         print "Writing index: $indexLocation/$toplevel/search/$id/$field/index$fragmentNumber.xml\n";
+         open (my $ifile, ">:utf8", "$indexLocation/$toplevel/search/$id/$field/index$fragmentNumber.xml");
+         print $ifile "<indexFile>\n";
+         print $ifile $obuffer;
+         print $ifile "</indexFile>\n";
          close ($ifile);
       }
-   }   
+      open (my $mapfile, ">:utf8", "$indexLocation/$toplevel/search/$id/$field/indexmap.xml");
+      print $mapfile "<indexmap>\n";
+      print $mapfile $mapbuffer."</file>\n";
+      print $mapfile "</indexmap>\n";
+      close ($mapfile);
+      open (my $fmapfile, ">:utf8", "$indexLocation/$toplevel/search/$id/$field/indexmapfast.xml");
+      print $fmapfile "<indexmap>\n";
+      print $fmapfile $fmapbuffer."$firstWord $lastWord</file>\n";
+      print $fmapfile "</indexmap>\n";
+      close ($fmapfile);
+   }
 }
 
 sub output_browse_if
@@ -418,8 +506,8 @@ sub create_fulltexts
 
 sub main
 {
-   print "Updating extracted fulltexts\n";
-   create_fulltexts ($renderDir, $metadataDir, $fulltextDir, '.');
+#   print "Updating extracted fulltexts\n";
+#   create_fulltexts ($renderDir, $metadataDir, $fulltextDir, '.');
    
 #   print "Deleting old indices\n";
 #   delete_indices ();
@@ -428,12 +516,21 @@ sub main
 #   foreach my $toplevel ( "main" )
    foreach my $toplevel ( keys %{$indexers} )
    {
+#debug to only process main
+#      if ($toplevel ne 'main')
+#      { next; }
+   
       print "Processing $toplevel\n";
 
       # create search and browse indices
       foreach my $index_id ( @{$indexers->{$toplevel}->{'field_index'}} )
       {
          my ($id , $name, $location) = @{$index_id};
+         
+# debug to only process metadata index
+#         if ($id ne '3')
+#         { next; }        
+         
          print "Creating search/browse index: [ID=$id, Name=$name, Location=$location]\n";
          my ($if, $ifb, $sort, $ifmap, $fmap, $titlemap, $browselocations, $fileid) = ({}, {}, {}, {}, {}, {}, {}, 0);
          foreach my $field ( keys %{$indexers->{$toplevel}->{'field_search'}})
@@ -463,8 +560,9 @@ sub main
          my ($primary, @other) = split (',', $location);
          my $titlematch = $indexers->{$toplevel}->{'title_match'};
          ($fileid) = index_dir ($ifmap, $primary, ".", \@other, $if, $ifb, $sort, $fmap, $titlemap, $fileid, $titlematch, $indexers->{$toplevel}->{'file_exclude'}, $browselocations);
+         print "\n";
          output_search_if ($toplevel, $id, $if, $fmap, $titlemap);
-         output_browse_if ($toplevel, $id, $ifb, $fmap, $titlemap);
+#         output_browse_if ($toplevel, $id, $ifb, $fmap, $titlemap);
          output_fulllist ($toplevel, $id, $fmap, $titlemap, $fileid);
          output_sort_if ($toplevel, $sort, $fmap, $titlemap, $fileid);
       }
