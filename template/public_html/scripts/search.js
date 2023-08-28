@@ -107,11 +107,11 @@ function doSearch (aprefix)
 
    // first split into phrases
    var m;
-   var re = /\+?\"[^\"]+\"|\+?[^\s\"]+/g;
+   var re = /\+?([a-zA-Z_]+\:)?\"[^\"]+\"|\+?[^\s\"]+/g;
    while (m = re.exec (query))
    {
       var phrase = m[0];
-      phrase = phrase.replace (/(\+?)\"([^\"]+)\"/, "$1$2");
+      phrase = phrase.replace (/(\+?)([a-zA-Z_]+\:)?\"([^\"]+)\"/, "$1$2$3");
       phrases.push (phrase);
    }
 
@@ -130,6 +130,19 @@ function doSearch (aprefix)
       
       // create accum array for this phrase
       var paccum = new Array ();
+      
+      // separate field from value
+      var use_field = 'all';
+      if (phrases[k].match (/\:/))
+      {
+         var parts = phrases[k].split (/\:/);
+         if ((parts.length < 2) || (parts[0] == '') || (parts[1] == ''))
+            continue;
+         use_field = parts[0];
+         phrases[k] = parts[1];
+      } 
+      
+//      console.log (use_field+'  '+phrases[k]);
    
       // read term frequency files for each term in each phrase
       var terms = phrases[k].split (/ +/);   
@@ -140,17 +153,6 @@ function doSearch (aprefix)
          if (i+1 < terms.length)
          { nextword = terms[i+1]; }         
          var phraseaccum = new Array();
-         
-         // separate field from value
-         var use_field = 'all';
-         if (terms[i].match (/\:/))
-         {
-            var parts = terms[i].split (/\:/);
-            if ((parts.length < 2) || (parts[0] == '') || (parts[1] == ''))
-               continue;
-            use_field = parts[0];
-            terms[i] = parts[1];
-         }
          
          // wildcards check
          var wildcards = 0;
@@ -203,7 +205,7 @@ function doSearch (aprefix)
             }
             else // check if term appears within bounds of file
             {
-               if (! ((terms[i].localeCompare (allterms[0]) >= 0) && (terms[i].localeCompare (allterms[allterms.length-1]) <= 0)))
+               if (! ((terms[i].localeCompare (allterms[0], "en-ZA") >= 0) && (terms[i].localeCompare (allterms[allterms.length-1], "en-ZA") <= 0)))
                { continue; }
             }   
             

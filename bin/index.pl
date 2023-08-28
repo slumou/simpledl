@@ -7,9 +7,11 @@
 $|=1;
 
 use POSIX;
+use locale;
 use XML::DOM::XPath;
 
 binmode STDOUT, ":utf8";
+setlocale(LC_CTYPE, "en_ZA");
 
 use FindBin;
 use lib "$FindBin::Bin";
