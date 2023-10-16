@@ -392,7 +392,7 @@ sub generateDir
          {
             my $item = substr ("$offset", 1);
             generateItemStubs ($item);
-            if (needUpdate (["$source/$item/index.xml", "$source/$item/metadata.xml", $mainstylesheet], ["$source/$item/index.html"]) || ($optForce))
+            if (needUpdate (["$source/$item/index.xml", "$source/$item/metadata.xml"], ["$source/$item/index.html"]) || ($optForce))
             {
                print "Transforming $source/$item xml->html\n";
                transform ($mainstylesheet, "$source/$item/index.xml", "$source/$item/index.html", 

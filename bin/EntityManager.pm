@@ -100,12 +100,16 @@ sub saveEntities
 
 sub addEntityMetadata
 {
-   my ($authname, $metadata) = @_;
+   my ($authname, $id, $metadata) = @_;
    $authname =~ s/[\n\r]//go;
    $metadata =~ s/[\n\r]/CRLF/go;
    my $name = authToName ($authname);
+   if (! defined $id)
+   {
+      $id = $entity_id++;
+   }
    if (! defined $entity_index->{$name})
-   { $entity_index->{$name} = [ $authname, $entity_id++, $metadata ]; }
+   { $entity_index->{$name} = [ $authname, $id, $metadata ]; }
    else
    { $entity_index->{$name}->[2] = $metadata; }
 }
@@ -152,7 +156,7 @@ sub createEntityFiles
       my $id = $entity_index->{$name}->[1];
       my $metadata = $entity_index->{$name}->[2];
       $metadata =~ s/CRLF/\n/go;
-      open ( my $ifile, ">:utf8", "$entity_user_location/internal$id.xml");
+      open ( my $ifile, ">:utf8", "$entity_user_location/entity$id.xml");
       print $ifile "<user>\n<type>Commissioned Contributor</type>\n";
       print $ifile "<name>$authname</name>\n";
       print $ifile "$metadata\n";

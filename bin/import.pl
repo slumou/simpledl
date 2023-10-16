@@ -61,6 +61,8 @@ sub importAuthorities
          # get positions of key elements
          my $typeOfEntity_position = getPos ($headings, "typeOfEntity");
          my $authorizedFormOfName_position = getPos ($headings, "authorizedFormOfName");
+         my $uniqueIdentifier_position = getPos ($headings, $fixedidentifier);
+         my $id = undef;
 
          # screen for authority files
          if ((defined $typeOfEntity_position) && (defined $authorizedFormOfName_position))
@@ -77,7 +79,15 @@ sub importAuthorities
                   $value_bit = $fields->[$i]->[$j];
                   $metadata .= "<$heading>".XMLEscape ($value_bit)."</$heading>\n";
                }
-               addEntityMetadata ($authname, $metadata);
+               if (defined $uniqueIdentifier_position)
+               {
+                  my $testId = $fields->[$i]->[$uniqueIdentifier_position];
+                  if ($testId !~ /^\s*$/)
+                  {
+                     $id = $testId;
+                  }
+               }
+               addEntityMetadata ($authname, $id, $metadata);
             }
          }
       }
@@ -101,7 +111,8 @@ sub makeSlug
 {
    my ($s) = @_;
 #my $t=$s;   
-   $s =~ s/^\s+|\s+$//g;   
+   $s =~ s/^\s+//;
+   $s =~ s/\s+$//;
    $s = lc (NFC($s));
    $s =~ s/'//g;
    $s =~ s/[^a-z0-9\x{00c0}-\x{00ff}\- ]//g;
@@ -114,7 +125,8 @@ sub makeSlug
 sub trimws
 {
    my ($s) = @_;
-   $s =~ s/^\s+|\s+$//g;
+   $s =~ s/^\s+//;
+   $s =~ s/\s+$//;
    return $s;
 }
 
@@ -127,8 +139,8 @@ sub getVal
    if (defined $position)
    { 
       my $v = $fields->[$position];
-      $v =~ s/^\s*//;
-      $v =~ s/\s*$//;
+      $v =~ s/^\s+//;
+      $v =~ s/\s+$//;
       return $v; 
    }
 
@@ -152,10 +164,78 @@ sub getPos
 # process a directory of metadata spreadsheets
 sub importDir
 {
-   my ($source, $destination, $offset, $level, $optForce, $resolverDir) = @_;
+   my ($source, $destination, $optForce, $resolverDir) = @_;
+
+   # to track index entries as metadata is processed
+   my $childrenByParent = {};
+
+   importMetadata ($source, $destination, '', $optForce, $resolverDir, $childrenByParent);
+   importIndex ($destination, '', 1, $optForce, $resolverDir, $childrenByParent);
+}
+
+# propagate index files through system
+sub importIndex
+{
+   my ($destination, $offset, $level, $optForce, $resolverDir, $childrenByParent) = @_;
    
-   mkdir ($destination);
+   # get destination contents
+   opendir (my $dir, $destination.$offset);
+   my @dirs = readdir ($dir);
+   closedir ($dir);
+   @dirs = grep { !/^\./ } @dirs;
+   @dirs = sort { $a cmp $b } @dirs;
+
+   # process each entry in directory
+   foreach my $d (@dirs)
+   {
+      # recurse into directories
+      if (-d "$destination$offset/$d")
+      {
+         importIndex ($destination, "$offset/$d", $level+1, $optForce, $resolverDir, $childrenByParent);
+
+         # check that directory is in children listing or add it
+         my $found = 0;
+         my $searchstring = $d.'@';
+         foreach my $entry (@{$childrenByParent->{$offset}})
+         {
+            if (index ($entry, $searchstring) != -1)
+            { $found = 1; }
+         }
+         if ($found == 0)
+         {
+            push (@{$childrenByParent->{$offset}}, "$d\@type\@series");
+         }
+      }
+   }      
+         
+   # check that metadata file exists
+   if (! -e "$destination$offset/metadata.xml")
+   {
+      if (createXML ("$destination$offset/metadata.xml", "", "item", [], []))
+      {
+         print "METADATA : Generating $destination$offset/metadata.xml\n";
+      }      
+   }
+      
+   # create index.xml
+   if (! defined $childrenByParent->{$offset})
+   {
+      $childrenByParent->{$offset} = [];
+   }
+   if (createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level" ], [ join ($separatorClean, @{$childrenByParent->{$offset}}), $level ]))
+   {
+      print "METADATA : Generating $destination$offset/index.xml\n";
+   }
+}
+
+# propagate metadata through system from spreadsheets
+sub importMetadata
+{
+   my ($source, $destination, $offset, $optForce, $resolverDir, $childrenByParent) = @_;
    
+   mkdir ($destination) if (! -e "$destination");
+
+   # get listing of source files   
    opendir (my $dir, $source.$offset);
    my @dirs = readdir ($dir);
    closedir ($dir);
@@ -167,20 +247,15 @@ sub importDir
    my @nontoplevels = grep { !/top.?level/i } @dirs;
    @dirs = ( @toplevels, @nontoplevels );
    
-   my @items = ();
-   my $gotItems = 0;
-   my $counter = 1;
-   my %dirBySlug = ();
-   my %levelBySlug = ();
-   my %childrenByParent = ();
-   my %levelsByParent = ();
+   my $counter = 1;    # for automatic filenames 
+   my %dirBySlug = (); # slugs tracked across files but not directories
 
    # process each entry in directory - first the CSV files
    foreach my $d (@dirs)
    {
       if ((! -d "$source$offset/$d") && ($d =~ /\.[cC][sS][vV]$/))
       {
-         # print "Processing CSV file: $d\n";
+         # read CSV and add in extra fields to help content developers
          my ($headings, $fields) = getCSV ("$source$offset/$d");
          $headings->[$#$headings+1] = 'spreadsheet';
          $headings->[$#$headings+1] = 'slug';
@@ -193,25 +268,13 @@ sub importDir
          my $levelOfDescription_position = getPos ($headings, "levelOfDescription");
          my $authorizedFormOfName_position = getPos ($headings, "authorizedFormOfName");
          my %dirByLegacy = ();
-         my %levelByLegacy = ();
 
-         # check that these fields exist, or it is not an ATOM metadata file
-         
-         # determine CSV file type
-         
-         # check for authorities file
+         # check for authorities file or process current file
          if (defined $authorizedFormOfName_position)
          {
             print "METADATA : Skipping authorities file: $d\n";
             next;
-         }
-         
-         # check for Atom-style metadata file
-#         elsif (( defined $title_position ) &&
-#                ( defined $legacyId_position ) &&
-#                ( defined $parentId_position ) &&
-#                ( defined $levelOfDescription_position ))
-#         {
+         }         
          print "METADATA : Processing CSV file: $d\n";
          
          # trim LoD fields
@@ -219,218 +282,167 @@ sub importDir
          {
             for ( my $i=0; $i<=$#$fields; $i++ )
             {
-               $fields->[$i]->[$levelOfDescription_position] =~ s/^\s+|\s+$//g;
+               $fields->[$i]->[$levelOfDescription_position] = trimws ($fields->[$i]->[$levelOfDescription_position]);
                $fields->[$i]->[$levelOfDescription_position] = lc ($fields->[$i]->[$levelOfDescription_position]);
             }
          }
          
+         # process each line of the file
          for ( my $i=0; $i<=$#$fields; $i++ )
          {
             # add in spreadsheet source
             $fields->[$i]->[$#{$fields->[$i]}+1] = "$offset/$d";
 
+            # find the level of description, defaulting to 'item'
             my $LoD = 'item';
             if (defined $levelOfDescription_position)
             {
                $LoD = $fields->[$i]->[$levelOfDescription_position];
             }   
 
-            if (($LoD ne 'collection') && ($LoD ne 'view'))
-            {
-               #print "Detected $LoD metadata\n";
-               my $filename = $counter;
-               my $effectiveLevel = $level + 1;
-               $counter++;
-               my $createUniqueId = '';
-               
-               # use a fixed identifier if there is one
-               if ((defined $fixedidentifier) && ($fixedidentifier ne ''))
-               {
-                  my $identifier_position = getPos ($headings, $fixedidentifier);
-                  if ((defined $identifier_position) && ($fields->[$i]->[$identifier_position] ne ''))
-                  {
-                     $filename = $fields->[$i]->[$identifier_position];
-                     $filename =~ s/^\s+|\s+$//g;
-                     $filename =~ s/[^a-zA-Z0-9_\-\.]/_/go;
-                     
-                     # set flag to create simple resolver entry
-                     $createUniqueId = $filename;
-                  }
-               }
-                  
-               # check for parent entry
-               my $qubitParentSlug_position = getPos ($headings, "qubitParentSlug");
-               my $parent = undef;
-               if ((defined $qubitParentSlug_position) &&
-                   ($fields->[$i]->[$qubitParentSlug_position] ne '') &&
-                   (exists $dirBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])}))
-               {
-                  $parent = $dirBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])};
-                  $effectiveLevel = $levelBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])} + 1;
-               }
-               elsif ((defined $parentId_position) &&
-                      ($fields->[$i]->[$parentId_position] ne '') &&
-                      (exists $dirByLegacy{$fields->[$i]->[$parentId_position]}))
-               {
-                  $parent = $dirByLegacy{$fields->[$i]->[$parentId_position]};
-                  $effectiveLevel = $levelByLegacy{$fields->[$i]->[$parentId_position]} + 1;
-               }
-                  
-               # save parent-child details for deferred generation of index 
-               if (defined $parent)
-               {
-                  if (! exists $childrenByParent{$parent})
-                  { 
-                     $childrenByParent{$parent} = [];
-                     $levelsByParent{$parent} = [ $effectiveLevel-1, 'collection' ];
-                  }
-                  push (@{$childrenByParent{$parent}}, $filename.'@type@'.$LoD);
-                  $filename = $parent.'/'.$filename;
-               }
-               else
-               {
-                  $items[$#items+1] = $filename.'@type@'.$LoD;               
-               }
-               $childrenByParent{$filename} = [];
-               $levelsByParent{$filename} = [ $effectiveLevel, $LoD ];
-               
-               # create simple resolver entry
-               if ($createUniqueId ne '')
-               {
-#                  print "*** $resolverDir, $destination, $offset, $filename $createUniqueId";
-                  createResolver ($resolverDir, $destination, $offset, $filename, $createUniqueId);
-               }
-                  
-               # set locations for future child elements
-               if ((defined $title_position) &&
-                   ($fields->[$i]->[$title_position] ne ''))
-               {
-                  my $slug = makeSlug ($fields->[$i]->[$title_position]);
-                  $dirBySlug{$slug} = $filename;
-                  $levelBySlug{$slug} = $effectiveLevel;
-                  # add slug into metadata explicitly
-                  $fields->[$i]->[$#{$fields->[$i]}+1] = $slug;
-               }
-               if ((defined $legacyId_position) &&
-                   ($fields->[$i]->[$legacyId_position] ne ''))
-               {
-                  $dirByLegacy{$fields->[$i]->[$legacyId_position]} = $filename;
-                  $levelByLegacy{$fields->[$i]->[$legacyId_position]} = $effectiveLevel;
-               }
+            # skip view lines
+            next if ($LoD eq 'view');
 
-               # gather all views (if there are views of this item)
-               if (defined $digitalObjectPath_position)
+            # create initial filename from counter and assume not fixed id
+            my $filename = $counter;
+            $counter++;
+            my $createUniqueId = '';
+            
+            # use a fixed identifier if there is one
+            if ((defined $fixedidentifier) && ($fixedidentifier ne ''))
+            {
+               my $identifier_position = getPos ($headings, $fixedidentifier);
+               if ((defined $identifier_position) && ($fields->[$i]->[$identifier_position] ne ''))
                {
-                  my @views = ();
-                  if ($fields->[$i]->[$digitalObjectPath_position] !~ /^\s*$/)
-                  {  
+                  $filename = $fields->[$i]->[$identifier_position];
+                  $filename =~ trimws ($filename);
+                  $filename =~ s/[^a-zA-Z0-9_\[\]\-\.]/_/go;
+                  
+                  # set flag to create simple resolver entry
+                  $createUniqueId = $filename;
+               }
+            }
+               
+            # check for parent entry
+            my $qubitParentSlug_position = getPos ($headings, "qubitParentSlug");
+            my $parent = undef;
+            if ((defined $qubitParentSlug_position) &&
+                ($fields->[$i]->[$qubitParentSlug_position] ne '') &&
+                (exists $dirBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])}))
+            {
+               $parent = $dirBySlug{trimws ($fields->[$i]->[$qubitParentSlug_position])};
+            }
+            elsif ((defined $parentId_position) &&
+                   ($fields->[$i]->[$parentId_position] ne '') &&
+                   (exists $dirByLegacy{$fields->[$i]->[$parentId_position]}))
+            {
+               $parent = $dirByLegacy{$fields->[$i]->[$parentId_position]};
+            }
+               
+            # save parent-child details for deferred generation of index
+            if (defined $parent)
+            {
+               if (! exists $childrenByParent->{$offset.'/'.$parent})
+               {
+                  $childrenByParent->{$offset.'/'.$parent} = [];
+               }
+               push (@{$childrenByParent->{$offset.'/'.$parent}}, $filename.'@type@'.$LoD);
+            }
+            else
+            {
+               if (! exists $childrenByParent->{$offset})
+               {
+                  $childrenByParent->{$offset} = [];
+               }
+               push (@{$childrenByParent->{$offset}}, $filename.'@type@'.$LoD);
+            }
+            
+            # update filename to include parent
+            if (defined $parent)
+            {
+               $filename = $parent.'/'.$filename;
+            }
+            
+            # create simple resolver entry
+            if ($createUniqueId ne '')
+            {
+               createResolver ($resolverDir, $destination, $offset, $filename, $createUniqueId);
+            }
+               
+            # set locations for future child elements
+            if ((defined $title_position) &&
+                ($fields->[$i]->[$title_position] ne ''))
+            {
+               my $slug = makeSlug ($fields->[$i]->[$title_position]);
+               $dirBySlug{$slug} = $filename;
+               # add slug into metadata explicitly
+               $fields->[$i]->[$#{$fields->[$i]}+1] = $slug;
+            }
+            if ((defined $legacyId_position) &&
+                ($fields->[$i]->[$legacyId_position] ne ''))
+            {
+               $dirByLegacy{$fields->[$i]->[$legacyId_position]} = $filename;
+            }
+
+            # gather all views (if there are views of this item)
+            if (defined $digitalObjectPath_position)
+            {
+               my @views = ();
+               if ($fields->[$i]->[$digitalObjectPath_position] !~ /^\s*$/)
+               {  
+                  my $title = '';
+                  if (defined $title_position)
+                  {
+                     $title = $fields->[$i]->[$title_position];
+                  }
+                  @views = ($title, $fields->[$i]->[$digitalObjectPath_position]); 
+               }
+               for ( my $j=0; $j<=$#$fields; $j++ )
+               { 
+                  # match parent (item) and child (view) rows
+                  if ((defined $legacyId_position) && (defined $parentId_position) && (defined $levelOfDescription_position) &&
+                      ($fields->[$i]->[$legacyId_position] eq $fields->[$j]->[$parentId_position]) &&
+                      ($fields->[$j]->[$levelOfDescription_position] eq 'view'))
+                  {
                      my $title = '';
                      if (defined $title_position)
                      {
-                        $title = $fields->[$i]->[$title_position];
+                        $title = $fields->[$j]->[$title_position];
                      }
-                     @views = ($title, $fields->[$i]->[$digitalObjectPath_position]); 
+                     @views = (@views, $title, $fields->[$j]->[$digitalObjectPath_position]); 
                   }
-                  for ( my $j=0; $j<=$#$fields; $j++ )
-                  { 
-                     # match parent (item) and child (view) rows
-                     if ((defined $legacyId_position) && (defined $parentId_position) && (defined $levelOfDescription_position) &&
-                         ($fields->[$i]->[$legacyId_position] eq $fields->[$j]->[$parentId_position]) &&
-                         ($fields->[$j]->[$levelOfDescription_position] eq 'view'))
-                     {
-                        my $title = '';
-                        if (defined $title_position)
-                        {
-                           $title = $fields->[$j]->[$title_position];
-                        }
-                        @views = (@views, $title, $fields->[$j]->[$digitalObjectPath_position]); 
-                     }
-                  }
-                  # strip prefixes from view locations and check for missing files
-                  for ( my $k=0; $k<=$#views; $k+=2 )
-                  {
-                     $views[$k+1] =~ s/\/uploads\/fhya\/(.*)/$1/;
-                     $views[$k+1] =~ s/\/uploads\/(.*)/$1/;
-                     # check that the file exists
-                     if (! -e "$renderDir/collection/$views[$k+1]")
-                     {
-                        print "MISSING FILE: $renderDir/collection/$views[$k+1]\n";
-                     }
-                  }
-                  $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, @views);
                }
+               # strip prefixes from view locations and check for missing files
+               for ( my $k=0; $k<=$#views; $k+=2 )
+               {
+                  $views[$k+1] =~ s/\/uploads\/fhya\/(.*)/$1/;
+                  $views[$k+1] =~ s/\/uploads\/(.*)/$1/;
+                  # check that the file exists
+                  if (! -e "$renderDir/collection/$views[$k+1]")
+                  {
+                     print "MISSING FILE: $renderDir/collection/$views[$k+1]\n";
+                  }
+               }
+               $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, @views);
+            }
 
-               # write XML
-               if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
+            # write XML
+            if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
+            {
+               if (! -e "$destination$offset/$filename")
+               {
+                  # print "Creating directory $destination$offset/$filename\n";
+                  mkdir ("$destination$offset/$filename");
+               }
+               if (createXML ("$destination$offset/$filename/metadata.xml", substr ("$offset/$filename", 1), "item", $headings, $fields->[$i]))
                {
                   print "METADATA : Generating $LoD $destination$offset/$filename/metadata.xml\n";
-                  if (! -e "$destination$offset/$filename")
-                  {
-                     # print "Creating directory $destination$offset/$filename\n";
-                     mkdir ("$destination$offset/$filename");
-                  }
-                  createXML ("$destination$offset/$filename/metadata.xml", substr ("$offset/$filename", 1), "item", $headings, $fields->[$i]);
-
-                     # output blank index file if it is not there
-                     #if (! -e "$destination$offset/$filename/index.xml")
-                     #{
-                     #   print "Generating $destination$offset/$filename/index.xml\n";
-                     #   create_XML ("$destination$offset/$filename/index.xml", "", "collection", [ "item", "level", "type" ], [ join ('|', ()), $effectiveLevel, $LoD ]);
-                     #}
                }
             }
-            elsif ($LoD eq 'collection')
-            {
-               #print "Detected collection metadata\n";
-                  
-               if (! defined $legacyId_position)
-               { next; }
-               my $filename = $fields->[$i]->[$legacyId_position];
-
-               # update views to point to logo
-               if (defined $digitalObjectPath_position)
-               {
-                  if ($fields->[$i]->[$digitalObjectPath_position] =~ /uploads\/fhya\/(.*)/)
-                  {
-                     $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, ('Logo', $1));
-                  }
-                  elsif ($fields->[$i]->[$digitalObjectPath_position] =~ /uploads\/(.*)/)
-                  {
-                     $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, ('Logo', $1));
-                  }
-                  else
-                  {
-                     $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, ('Logo', $fields->[$i]->[$digitalObjectPath_position]));
-                  }
-               }   
-         
-               # write XML
-               if ($filename ne '')
-               {
-                  if ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce))
-                  {
-                     print "METADATA : Generating $LoD $destination$offset/$filename/metadata.xml\n";
-                     if (! -e "$destination$offset/$filename")
-                     {
-                        print "METADATA : Creating directory $destination$offset/$filename\n";
-                        #my $x = 
-                        mkdir ("$destination$offset/$filename");
-                        #if (! $x) { print "X $x !! $! \n"; }
-                     }
-                     createXML ("$destination$offset/$filename/metadata.xml", "", "item", $headings, $fields->[$i]);
-                  }
-                  $items[$#items+1] = $filename.'@type@collection';
-                  # output blank index file if it is not there
-                  #if (! -e "$destination$offset/$filename/index.xml")
-                  #{
-                  #   print "Generating $destination$offset/$filename/index.xml\n";
-                  #   createXML ("$destination$offset/$filename/index.xml", "", "collection", [ "item", "level", "type" ], [ '', $level, $LoD ]);
-                  #}
-               }
-            }  
          }
       }
    }
+
    # process each entry in directory - then the directories
    foreach my $d (@dirs)
    {
@@ -443,47 +455,7 @@ sub importDir
             print "METADATA : Creating directory $destination$offset/$d\n";
             mkdir ("$destination$offset/$d");
          }   
-         importDir ($source, $destination, "$offset/$d", $level+1, $optForce, $resolverDir);
-      }
-   }
-   
-   # generate auto listing if no top-level or series or collection
-   if ($#items == -1)
-   {
-      # generate index of items from destination directory
-      opendir (my $dir, $destination.$offset);
-      @items = readdir ($dir);
-      closedir ($dir);
-      @items = grep { !/^\./ } @items;
-      @items = sort { $a cmp $b } @items;
-      @items = grep { -d "$destination$offset/$_" } @items;
-   }
-   
-   # prefix each directory, to create list of source spreadsheets
-   @dirs = map { "$source$offset/$_" } @dirs; 
-#print "*** [".join ('] [', @dirs)."]\n";   
-   # output index file
-   if ((needUpdate (\@dirs, ["$destination$offset/index.xml"])) || ($optForce))
-   {
-      print "METADATA : Generating $destination$offset/index.xml\n";
-      createXML ("$destination$offset/index.xml", "", "collection", [ "item", "level", "type" ], [ join ($separatorClean, @items), $level, $LoD ]);
-   }
-   
-   # output blank metadata file if it is not there
-   if (! -e "$destination$offset/metadata.xml")
-   {
-      print "METADATA : Generating $destination$offset/metadata.xml\n";
-      createXML ("$destination$offset/metadata.xml", "", "item", [], []);
-   }
-   
-   # cycle through and generate deferred index files
-   foreach my $parent (keys %childrenByParent)
-   {
-      if ((needUpdate (\@d, ["$destination$offset/$parent/index.xml"])) || ($optForce))
-      {
-         # output index file
-         print "METADATA : Generating deferred $destination$offset/$parent/index.xml\n";
-         createXML ("$destination$offset/$parent/index.xml", "", "collection", [ "item", "level", "type" ], [ join ($separatorClean, @{$childrenByParent{$parent}}), $levelsByParent{$parent}->[0], $levelsByParent{$parent}->[1] ]);
+         importMetadata ($source, $destination, "$offset/$d", $optForce, $resolverDir, $childrenByParent);
       }
    }
 }
@@ -534,8 +506,9 @@ sub createXML
 {
    my ($filename, $itemlocation, $container, $headings, $values) = @_;
 
-   open (my $file, ">:utf8", "$filename");
-   print $file "<$container>\n";
+   my $printBuffer = '';   
+#   open (my $file, ">:utf8", "$filename");
+#   print $file "<$container>\n";
    
    my ($eventActors, $eventTypes, $eventDates, $eventDescriptions, $digitalObjectPath, $creators, $cdate) = ('', '', '', '', '', '', '');
    my $title = '';
@@ -549,8 +522,7 @@ sub createXML
       my $heading = $headings->[$i];
 
       # trim start and end spaces in tag name
-      $heading =~ s/\s+$//;
-      $heading =~ s/^\s+//;      
+      $heading = trimws ($heading);
 
       # special processing for structured event Atom fields and for links to objects
       if ($heading eq 'eventActors')
@@ -590,21 +562,20 @@ sub createXML
                {
 #print "FOUND $heading $value_bit $separator $separator2 \n";
                   my $subfieldIndicator = 'a';
-                  $value_bit =~ s/\s+$//;
-                  $value_bit =~ s/^\s+//;               
+                  $value_bit = trimws ($value_bit);
                   if ($heading ne '')
                   {
-                     print $file "   <$heading$attributes>\n";
+                     $printBuffer .= "   <$heading$attributes>\n";
                   }
                   foreach my $value_bit2 (split ($separator2, $value_bit))
                   {
                      if ($heading eq 'relatedUnitsOfDescription')
                      {
-                        print $file "      <$subfieldIndicator>".XMLEscape (URLEscape ($value_bit2))."</$subfieldIndicator>\n";
+                        $printBuffer .= "      <$subfieldIndicator>".XMLEscape (URLEscape ($value_bit2))."</$subfieldIndicator>\n";
                      }
                      elsif ($heading ne '')
                      {
-                        print $file "   <$subfieldIndicator>".XMLEscape ($value_bit2)."</$subfieldIndicator>\n";
+                        $printBuffer .= "   <$subfieldIndicator>".XMLEscape ($value_bit2)."</$subfieldIndicator>\n";
                         if ($heading eq 'title')
                         { $title = XMLEscape ($value_bit2); }
                         if ($heading eq 'date')
@@ -614,21 +585,20 @@ sub createXML
                   } 
                   if ($heading ne '')
                   {
-                     print $file "   </$heading>\n";
+                     $printBuffer .= "   </$heading>\n";
                   }
                } 
                else
                {
-                  $value_bit =~ s/\s+$//;
-                  $value_bit =~ s/^\s+//;               
+                  $value_bit = trimws ($value_bit);
                   if ($heading eq 'relatedUnitsOfDescription')
                   {
-                     print $file "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
+                     $printBuffer .= "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
 #                     print $file "   <$heading$attributes>".XMLEscape (URLEscape ($value_bit))."</$heading>\n";
                   }
                   elsif ($heading ne '')
                   {
-                     print $file "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
+                     $printBuffer .= "   <$heading$attributes>".XMLEscape ($value_bit)."</$heading>\n";
                      if ($heading eq 'title')
                      { $title = XMLEscape ($value_bit); }
                      if ($heading eq 'date')
@@ -657,7 +627,7 @@ sub createXML
             $actorId = addEntityItemRole ($eventActors_list[$i], $itemlocation, $title, $eventTypes_list[$i], $eventDates_list[$i]);
             $actorId = " id=\"internal$actorId\""; 
          }
-         print $file "   <event>\n".
+         $printBuffer .= "   <event>\n".
                      "      <eventActor$actorId>$eventActors_list[$i]</eventActor>\n".
                      "      <eventType>$eventTypes_list[$i]</eventType>\n".
                      "      <eventDate>$eventDates_list[$i]</eventDate>\n".
@@ -676,17 +646,15 @@ sub createXML
          $actorId = addEntityItemRole ($creators_list[$i], $itemlocation, $title, 'author', $cdate);
          $actorId = " id=\"internal$actorId\""; 
       }
-      print $file "   <$entityFieldX$actorId>$creators_list[$i]</$entityFieldX>\n";
+      $printBuffer .= "   <$entityFieldX$actorId>$creators_list[$i]</$entityFieldX>\n";
    }
 
 #print "***".$digitalObjectPath."\n";
    my @digitalObjectPath_list = split ($separator, XMLEscape ($digitalObjectPath));
    for ( my $i = 0; $i <= $#digitalObjectPath_list; $i+=2 )
    {
-      $digitalObjectPath_list[$i] =~ s/\s+$//;
-      $digitalObjectPath_list[$i] =~ s/^\s+//;
-      $digitalObjectPath_list[$i+1] =~ s/\s+$//;
-      $digitalObjectPath_list[$i+1] =~ s/^\s+//;
+      $digitalObjectPath_list[$i] = trimws ($digitalObjectPath_list[$i]);
+      $digitalObjectPath_list[$i+1] = trimws ($digitalObjectPath_list[$i+1]);
       
       # create stub with page number if thumbnail must rely on non-first page
       if ($digitalObjectPath_list[$i+1] =~ /^((.*)\/)?(.*\.pdf)\[([0-9]+)\]$/)
@@ -699,14 +667,25 @@ sub createXML
          close ($f2);         
       }
       
-      print $file "   <view>\n".
+      $printBuffer .= "   <view>\n".
                   "      <title>$digitalObjectPath_list[$i]</title>\n".
                   "      <file>".URLEscape ($digitalObjectPath_list[$i+1])."</file>\n".
                   "   </view>\n";
    }
-         
-   print $file "</$container>\n";
-   close ($file);
+
+   # only write file if it has changed
+   $printBuffer = "<$container>\n$printBuffer</$container>\n";
+   open (my $filein, "<:utf8", "$filename");
+   my $checkdata = do { local $/=undef; <$filein> };
+   close ($filein);
+   if ($checkdata ne $printBuffer)
+   {
+      open (my $fileout, ">:utf8", "$filename");
+      print $fileout $printBuffer;
+      close ($fileout);
+      return 1;
+   }   
+   return 0;
 }
 
 # merge user entries into full records
@@ -943,7 +922,7 @@ EOC
       }
       loadEntities ();
       importAuthorities ($spreadsheetDir);
-      importDir ($spreadsheetDir, $metadataDir, '', 1, $optForce, $resolverDir);
+      importDir ($spreadsheetDir, $metadataDir, $optForce, $resolverDir);
       saveEntities ();
       createEntityFiles ();
       print "\n";
