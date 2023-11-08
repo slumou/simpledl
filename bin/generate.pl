@@ -187,10 +187,10 @@ sub generateCompositeThumbs
          my $parser = new XML::DOM::Parser;
          my $doc = $parser->parsefile ("$source$offset/$afile");
          
-         foreach my $type ($doc->getElementsByTagName ('type'))
-         {
-            if (($type->hasChildNodes) && ($type->getFirstChild->toString eq 'file'))
-            {
+#         foreach my $type ($doc->getElementsByTagName ('type'))
+#         {
+#            if (($type->hasChildNodes) && ($type->getFirstChild->toString eq 'file'))
+#            {
                # gather the full list of first item thumbnails
                my @thumbs = ();
                foreach my $item ($doc->getElementsByTagName ('item'))
@@ -291,8 +291,8 @@ sub generateCompositeThumbs
                      system ($command);
                   }   
                }
-            }
-         }         
+#            }
+#         }         
       }         
    }
 }   
