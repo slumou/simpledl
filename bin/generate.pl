@@ -155,11 +155,18 @@ sub generateThumbs
             chomp $pageNumber;
             close ($f);
          }
-         # create thumbnail 
+         # create thumbnail
+#         $filename =~ s/\'/\\\\\'/go;
+#         $destfile = "$dest/$afile.jpg";
+#         $destfile =~ s/\'/\\\\\'/go;
+#         $filename =~ s/ /\\ /go;         
+#         $destfile =~ s/ /\\ /go;
+#print "*\n";
          my $command = "convert -define jpeg:size=200x200 ".
                "\'$filename\'"."[$pageNumber] ".                  
                "-thumbnail '200x200>' -background white -gravity center -extent 200x200 ".
                "\'$dest/$afile.jpg\' 2\>/dev/null";
+#print "$command\n";
          system ($command);
    #     print $command."\n";
       }
@@ -185,6 +192,7 @@ sub generateCompositeThumbs
       elsif ($afile =~ /index\.[xX][mM][lL]$/)
       {
          my $parser = new XML::DOM::Parser;
+#print "FILENAME: $source$offset/$afile\n";
          my $doc = $parser->parsefile ("$source$offset/$afile");
          
 #         foreach my $type ($doc->getElementsByTagName ('type'))
@@ -198,6 +206,7 @@ sub generateCompositeThumbs
                   if (($item->hasChildNodes) && ($item->getAttribute ('type') eq 'item'))
                   {
                      my $itemId = $item->getFirstChild->toString;
+print "FILENAME: $source$offset/$itemId/metadata.xml\n";
                      my $itemdoc = $parser->parsefile ("$source$offset/$itemId/metadata.xml");
                      
                      foreach my $view ($itemdoc->getElementsByTagName ('view'))

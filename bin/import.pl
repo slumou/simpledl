@@ -425,6 +425,17 @@ sub importMetadata
                }
                $fields->[$i]->[$digitalObjectPath_position] = join ($separatorClean, @views);
             }
+            
+            # escape unescaped ampersands to avoid being mistaken for attribute specification
+            # [hussein, 10 june 2024]
+            for ( my $j=0; $j<=$#{$fields->[$i]}; $j++ )
+            {
+#               if ($fields->[$i]->[$j] =~ /\@/)
+#               { print "************* YESBEFORE $fields->[$i]->[$j]\n"; }
+#               $fields->[$i]->[$j] =~ s/(?<!\\)\@/\\\@/go;
+#               if ($fields->[$i]->[$j] =~ /\@/)
+#               { print "************* YESAFTER $fields->[$i]->[$j]\n"; }
+            }
 
             # write XML
             if (($filename ne '') && ((needUpdate (["$source$offset/$d"], ["$destination$offset/$filename/metadata.xml"])) || ($optForce)))
@@ -469,6 +480,16 @@ sub XMLEscape
    $value =~ s/\>/\&gt;/go;
    $value =~ s/\'/\&apos;/go;
    $value =~ s/\"/\&quot;/go;
+   
+   # added automatic cleanup for microsoft characters
+   # [hussein, 10 june 2024]
+   # https://stackoverflow.com/questions/4332707/paste-from-ms-word-into-textarea/6219023#6219023
+   $value =~ s/[\x{2018}\x{2019}\x{201A}]/'/go;
+   $value =~ s/[\x{201C}\x{201D}\x{201E}]/"/go;
+   $value =~ s/[\x{2026}]/\.\.\./go;
+   $value =~ s/[\x{2013}\x{2014}]/\-/go;
+   $value =~ s/[\x{02C6}]/^/go;
+   $value =~ s/[\x{02DC}\x{00A0}]/ /go;
    
    return $value;
 }
