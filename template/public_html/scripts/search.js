@@ -140,7 +140,7 @@ function doSearch (aprefix)
             continue;
          use_field = parts[0];
          phrases[k] = parts[1];
-      } 
+      }
       
 //      console.log (use_field+'  '+phrases[k]);
    
@@ -400,6 +400,22 @@ function doSearch (aprefix)
             var field_value = document.forms["searchform"].elements["field_browse_"+field_name].value;
             if (field_value != "all")
             {
+               // if this is a subcollection, then first do a reverse lookup in the index
+               if (field_name == 'subcollection')
+               {
+                  var browse_index2 = loadXML ("indices/"+toplevel+"/browse/1/"+field_name+"/index.xml");
+                  var entry = browse_index2.getElementsByTagName ('entry');
+                  for ( var k=0; k<entry.length; k++ )
+                  {
+                     if (entry.item(k).innerHTML == field_value)
+                     { 
+                        field_value = entry.item(k).getAttribute ('id');
+                        break;
+                     }   
+                  }
+               }
+               
+               // otherwise get the browse list by id number and screen out objects
                var browse_index = loadXML ("indices/"+toplevel+"/browse/1/"+field_name+"/"+field_value+".xml");
                if (browse_index)
                {
