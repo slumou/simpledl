@@ -11,7 +11,7 @@ use locale;
 use XML::DOM::XPath;
 
 binmode STDOUT, ":utf8";
-setlocale(LC_CTYPE, "en_ZA");
+setlocale(LC_ALL, "en_US");
 
 use FindBin;
 use lib "$FindBin::Bin";
@@ -190,11 +190,11 @@ sub index_search_data
    
    my @words = split (' ', $data);
 
-   for ( my $i=0; $i<$#words; $i++ )
+   for ( my $i=0; $i<=$#words; $i++ )
    {
       my $aword = $words[$i];
       my $nextword = '';
-      if (($i+1) < ($#words))
+      if (($i+1) <= ($#words))
       { $nextword = $words[$i+1]; }
       
       if (! exists $stopwords{$aword})

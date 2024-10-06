@@ -180,7 +180,7 @@ function doSearch (aprefix)
             if (indexmap == null)
                continue;
          }
-            
+
          // find the index within the indexmap
          var indexmapfilelist = indexmap.getElementsByTagName ('file');
          for (var l=0; l<indexmapfilelist.length; l++ )
@@ -205,11 +205,13 @@ function doSearch (aprefix)
             }
             else // check if term appears within bounds of file
             {
-               if (! ((terms[i].localeCompare (allterms[0], "en-ZA") >= 0) && (terms[i].localeCompare (allterms[allterms.length-1], "en-ZA") <= 0)))
+               if (! ((terms[i].localeCompare (allterms[0], "en-US") >= 0) && (terms[i].localeCompare (allterms[allterms.length-1], "en-US") <= 0)))
                { continue; }
             }   
             
 //console.log ('term '+terms[i]+' phrases '+phrases[k]);
+//console.log ('index '+use_index+'  field '+use_field+'  fileid '+fileid);
+//console.log ("indices/"+toplevel+"/search/"+use_index+"/"+use_field+"/index"+fileid+".xml");
             
             indexfile = loadXML ("indices/"+toplevel+"/search/"+use_index+"/"+use_field+"/index"+fileid+".xml");
             if (indexfile == null)
@@ -244,6 +246,8 @@ function doSearch (aprefix)
                            if (((wildcardsnext==0) && (nextwords.indexOf (nextword) > -1)) ||
                                ((wildcardsnext==1) && (regListSearch (nextwords, termre))))
                            {
+                              //if ((i==0) && (isNan (paccum[fileid])))
+                              //{ paccum[fileid] = 0; }
                               if (! (isNaN (paccum[fileid])))
                               {
                                  paccum[fileid] += parseFloat(value) / df;
