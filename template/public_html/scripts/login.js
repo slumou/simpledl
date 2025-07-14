@@ -155,6 +155,12 @@ function makeBreaks () {
       document.getElementsByTagName ("p")[i].innerHTML =
       document.getElementsByTagName ("p")[i].innerHTML.replace
         (/(https?:\/\/[^ <]+)/g,"<a href=\"$1\">$1</a>");  
+      document.getElementsByTagName ("p")[i].innerHTML =
+      document.getElementsByTagName ("p")[i].innerHTML.replace
+        (/\&lt;i\&gt;/g,"<i>");  
+      document.getElementsByTagName ("p")[i].innerHTML =
+      document.getElementsByTagName ("p")[i].innerHTML.replace
+        (/\&lt;\/i\&gt;/g,"</i>");  
    }
 
    // sneak in some updates of URLs to propagate query terms from URL into links (to enable pdf.js highlighting)

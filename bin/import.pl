@@ -631,10 +631,10 @@ sub createXML
       }
    }
 
-   my @eventActors_list = split ('\|', XMLEscape ($eventActors));
-   my @eventTypes_list = split ('\|', XMLEscape ($eventTypes));
-   my @eventDates_list = split ('\|', XMLEscape ($eventDates));
-   my @eventDescriptions_list = split ('\|', XMLEscape ($eventDescriptions));
+   my @eventActors_list = split ($separator, XMLEscape ($eventActors));
+   my @eventTypes_list = split ($separator, XMLEscape ($eventTypes));
+   my @eventDates_list = split ($separator, XMLEscape ($eventDates));
+   my @eventDescriptions_list = split ($separator, XMLEscape ($eventDescriptions));
    if (($#eventActors_list == $#eventTypes_list) && 
        ($#eventTypes_list == $#eventDates_list))
 #        && 
@@ -658,7 +658,7 @@ sub createXML
    }
    
    # process creators (aka entityFieldX) as entities and add IDs to each
-   my @creators_list = split ('\|', XMLEscape ($creators));
+   my @creators_list = split ($separator, XMLEscape ($creators));
    for ( my $i = 0; $i <= $#creators_list; $i++ )
    {
       my $actorId = '';
