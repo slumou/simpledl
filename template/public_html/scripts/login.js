@@ -128,7 +128,7 @@ function doLogout ()
 
 function frontPageSearch ( avar ) 
 { 
-   document.location.href="./search.html?query=" + avar;
+   document.location.href="/search.html?query=" + avar;
 }
 
 // any page with a text box: to convert page breaks in text boxes into <br>s and make links live
