@@ -98,8 +98,14 @@ sub index_file
 
    # parse XML
    my $parser = new XML::DOM::Parser;
-#   print ".";
-   my $doc = $parser->parse ($data);
+   
+   my $doc;
+   eval { $doc = $parser->parse ($data) };
+   if ($@)
+   { 
+      print "XML error in file: $filename\n";
+      $doc = $parser->parse ('<fullrecord></fullrecord>'); 
+   }
 
    foreach my $field ( keys %{$ifmap} )
    {
@@ -466,8 +472,14 @@ sub create_fulltexts
          {         
             my $parser = new XML::DOM::Parser;
 #print "FILE:".$directory.'/'.$primary.'/'.$filepath.'/'.$afile."\n";
-            my $doc = $parser->parsefile ($primary.'/'.$filepath.'/'.$afile);
-            
+            my $doc;
+            eval { $doc = $parser->parsefile ($primary.'/'.$filepath.'/'.$afile); };
+            if ($@)
+            { 
+               print "XML error in file: $filepath / $afile\n";
+               $doc = $parser->parse ('<item></item>'); 
+            }
+
             my $fulltext_blob = '';
             foreach my $view ($doc->getElementsByTagName ('view'))
             {
