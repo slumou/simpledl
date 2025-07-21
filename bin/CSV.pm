@@ -17,6 +17,7 @@ use Unicode::Normalize qw (NFD);
 use utf8;
 
 use Text::CSV;
+use File::BOM qw(:all);
 
 sub getCSV
 {
@@ -27,7 +28,9 @@ sub getCSV
                            or die "Cannot use CSV: ".Text::CSV->error_diag ();
 
    my $fields = [];
-   open ( my $fh, "<:encoding(utf8)", $filename );
+   # consume BOM if there is one
+   open_bom ( my $fh, $filename, ':utf8' );
+#   open ( my $fh, "<:encoding(utf8)", $filename );
    while ( my $row = $csv->getline( $fh ) ) {
       push (@{$fields}, $row);
    }
