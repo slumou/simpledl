@@ -562,7 +562,11 @@ function renderMetadata (prefix, fn)
       var levelOfDescription = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('levelOfDescription');
       if (levelOfDescription.length > 0)
       {
-         var LoD = levelOfDescription.item(0).firstChild.data;
+         var LoD = '';
+         if (levelOfDescription.item(0).hasChildNodes ())
+         {
+            LoD = levelOfDescription.item(0).firstChild.data;
+         }   
          if (LoD == 'file')
          {
             itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="'+prefix+item+'/thumbnail.jpg"/></div>';
@@ -573,7 +577,7 @@ function renderMetadata (prefix, fn)
             if (views.length > 0)
             {
                var files = views.item(0).getElementsByTagName ('file');
-               if (files.length > 0)
+               if ((files.length > 0) && (files.item(0).hasChildNodes ()))
                {
                   itemfragcontent = itemfragcontent + '<div class="searchthumbimg"><img src="thumbs/'+files.item(0).firstChild.data+'.jpg"/></div>';
                }
@@ -583,13 +587,17 @@ function renderMetadata (prefix, fn)
       // add in title if it exists
       var titlesnippet = '';
       var titles = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('title');
-      if (titles.length > 0)
+      if ((titles.length > 0) && (titles.item(0).hasChildNodes ()))
       {
          titlesnippet = titles.item(0).firstChild.data;
+      }
+      else
+      {
+         titlesnippet = 'No title';
       }   
       // add in identifier if it exists
       var identifiers = metadataDocument.getElementsByTagName ('item').item(0).getElementsByTagName('identifier');
-      if (identifiers.length > 0)
+      if ((identifiers.length > 0) && (identifiers.item(0).hasChildNodes ()))
       {
          titlesnippet = titlesnippet + ' ('+identifiers.item(0).firstChild.data+')';
       }
