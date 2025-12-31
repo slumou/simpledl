@@ -34,7 +34,7 @@
 <label class="mdc-text-field mdc-text-field--outlined mdc-text-field--label-floating mdentryfieldwidth mdc-text-field--textarea usermotivationboxclass">
 <span class="mdc-text-field__ripple"></span>
 <textarea class="mdc-text-field__input" rows="5" cols="60" aria-labelledby="usermotivationboxs" name="usermotivation">Position:
-Affilitation:
+Affiliation:
 Motivation:</textarea>
 <span class="mdc-notched-outline">
 <span class="mdc-notched-outline__leading"></span>
