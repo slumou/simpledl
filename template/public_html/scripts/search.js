@@ -83,7 +83,7 @@ function doSearch (aprefix)
    // split query into terms and split out spaces
    query = document.forms["searchform"].elements["searchbox"].value;
    query = query.toLowerCase ();
-   query = query.replace (/['_\.]/g, " ");
+   query = query.replace (/['_\.\-]/g, " ");
    query = query.replace (/^ +/, "");
    query = query.replace (/ +$/, "");
    // query = query.replace (/%20/, " ");
