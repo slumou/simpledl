@@ -646,7 +646,7 @@ sub createXML
          if ($itemlocation ne '')
          { 
             $actorId = addEntityItemRole ($eventActors_list[$i], $itemlocation, $title, $eventTypes_list[$i], $eventDates_list[$i]);
-            $actorId = " id=\"internal$actorId\""; 
+            $actorId = " id=\"entity$actorId\""; 
          }
          $printBuffer .= "   <event>\n".
                      "      <eventActor$actorId>$eventActors_list[$i]</eventActor>\n".
@@ -665,7 +665,7 @@ sub createXML
       if ($itemlocation ne '')
       { 
          $actorId = addEntityItemRole ($creators_list[$i], $itemlocation, $title, 'author', $cdate);
-         $actorId = " id=\"internal$actorId\""; 
+         $actorId = " id=\"entity$actorId\""; 
       }
       $printBuffer .= "   <$entityFieldX$actorId>$creators_list[$i]</$entityFieldX>\n";
    }
